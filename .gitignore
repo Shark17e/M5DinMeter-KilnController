@@ -4,6 +4,9 @@ build/
 *.elf
 *.map
 
+# Hackster submission drafts (not part of the repo)
+hackster/
+
 # Editor / OS
 .vscode/
 *.swp
