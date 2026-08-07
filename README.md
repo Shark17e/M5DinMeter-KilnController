@@ -723,6 +723,13 @@ La cartella `docs/` contiene la documentazione di progetto completa (in italiano
 
 ---
 
+Demo:
+https://github.com/Shark17e/M5DinMeter-KilnController/blob/main/C0008.MP4
+
+Working demo:
+https://github.com/user-attachments/assets/3adb103c-6c93-481f-8417-2194b0528034
+
+
 # License / Licenza
 
 **CC BY-NC 4.0** — Creative Commons Attribution-NonCommercial 4.0 International.
