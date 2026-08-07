@@ -373,6 +373,7 @@ void loop() {
       break;
     case RUNNING:
       updateProgram();
+      if (currentState != RUNNING) break;   // observer può aver attivato SLOW_RISE/SOVRATEMP
       if (needsUpdate) {
         drawRunningState();
         needsUpdate = false;
