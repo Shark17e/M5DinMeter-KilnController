@@ -135,6 +135,7 @@ static bool    slowRiseWait       = false;  // in attesa che T arrivi al punto
 static float   slowRiseWaitTarget = 0.0f;   // T del punto finale del segmento
 static uint32_t slowRiseWaitAnchor = 0;     // cumSec del punto di ancoraggio
 static uint32_t slowRiseWaitStart = 0;
+static uint8_t  slowRiseWaitSeg   = 0;   // step visualizzato durante l'attesa
 
 // SSR control
 static bool ssrState           = false;
@@ -493,6 +494,7 @@ void handleShortPress() {
           int seg = currentSegmentIndex(elapsedNow);
           slowRiseWaitTarget = curveRT[seg].temp;
           slowRiseWaitAnchor = curveRT[seg].cumSec;
+          slowRiseWaitSeg    = seg;
           slowRiseWaitStart  = millis();
           slowRiseWait       = true;
           currentState       = RUNNING;

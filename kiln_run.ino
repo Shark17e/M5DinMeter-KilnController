@@ -28,7 +28,8 @@ void partialUpdateRunningState() {
   // R1: nome+segmento | SSR+duty | batteria
   int seg = 0;
   if (currentProgram && programRunning) {
-    seg = currentSegmentIndex((now - programStartTime) / 1000);
+    seg = slowRiseWait ? slowRiseWaitSeg
+                       : currentSegmentIndex((now - programStartTime) / 1000);
   }
   DinMeter.Display.setTextSize(1);
   DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);

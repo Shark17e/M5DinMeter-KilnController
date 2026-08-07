@@ -116,7 +116,7 @@ void stopProgram() {
 void updateProgram() {
   if (!currentProgram || !programRunning) return;
   uint32_t elapsedSec = (millis() - programStartTime) / 1000;
-  if (elapsedSec >= totalProgSeconds) {
+  if (elapsedSec >= totalProgSeconds && !slowRiseWait) {
     Serial.println("[updateProgram] Program finito");
     stopProgram();
     return;
