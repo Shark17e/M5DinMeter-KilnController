@@ -107,6 +107,7 @@ uint8_t programCount = 0;
 enum AppState {
   MAIN_MENU,
   RUNNING,
+  MANUAL,
   SLOW_RISE,
   SOVRATEMP,
   CONFIRM_DELETE,
@@ -174,6 +175,7 @@ static uint32_t pressStartTime = 0;
 
 // Partial update of main menu temperature
 static uint32_t lastTempDraw = 0;
+static uint32_t lastManualTempDraw = 0;
 
 // ------------------------------------------------
 // X-axis uses real time in seconds
@@ -206,6 +208,8 @@ void handleEncoder();
 
 void drawMainMenu();
 void updateMainMenuTemp();
+void drawManualScreen();
+void updateManualTempDraw();
 
 void drawRunningState();
 void partialUpdateRunningState();
@@ -265,8 +269,10 @@ void setup() {
     }
   }
   if (!kmOk) {
-    Serial.println("[Setup] Kmeter not found!");
-    while (true) { delay(1000); }
+    Serial.println("[Setup] Kmeter not found! Avvio senza sensore.");
+    // Fail-safe subito: SSR resta forzato OFF finche' il sensore non torna
+    sensorFailCount = SENSOR_FAIL_THRESHOLD;
+    sensorError     = true;
   }
 
   preferences.begin(NAMESPACE, false);
@@ -326,6 +332,7 @@ void loop() {
     else if (currentTemp < OVER_TEMP_C - 10.0f) overTemp = false;
     if (overTemp && currentState != SOVRATEMP) {
       if (programRunning) stopProgram();
+      setSsr(false);   // anche SSR manuale
       currentState = SOVRATEMP;
       needsUpdate = true;
     }
@@ -351,14 +358,19 @@ void loop() {
         partialUpdateRunningState();
       }
     }
-    else {
-      // Program is not running => force SSR OFF
+    else if (currentState != MANUAL) {
+      // Program is not running => force SSR OFF (in MANUAL l'SSR e' manuale)
+      setSsr(false);
+    } else if (sensorError) {
+      // Fail-safe: mai riscaldare senza sensore, anche in MANUAL
       setSsr(false);
     }
 
     if (currentState == MAIN_MENU) {
-      updateMainMenuTemp();
-    }
+        updateMainMenuTemp();
+      } else if (currentState == MANUAL) {
+        updateManualTempDraw();
+      }
   }
 
   DinMeter.update();
@@ -377,6 +389,12 @@ void loop() {
       if (currentState != RUNNING) break;   // observer può aver attivato SLOW_RISE/SOVRATEMP
       if (needsUpdate) {
         drawRunningState();
+        needsUpdate = false;
+      }
+      break;
+    case MANUAL:
+      if (needsUpdate) {
+        drawManualScreen();
         needsUpdate = false;
       }
       break;
@@ -448,6 +466,13 @@ void handleShortPress() {
       if (selectedIndex < programCount) {
         startProgram(selectedIndex);
       } else if (selectedIndex == programCount) {
+        // Manuale: interruttore SSR manuale
+        setSsr(false);
+        lastManualTempDraw = 0;
+        currentState = MANUAL;
+        needsUpdate = true;
+        ignoreButtonUntil = millis() + 300;
+      } else if (selectedIndex == programCount + 1) {
         // Begin new program creation
         newProgram.name = "";
         newProgram.pointCount = 0;
@@ -515,6 +540,14 @@ void handleShortPress() {
       needsUpdate = true;
     } break;
 
+    case MANUAL: {
+      // short => esce al menu (SSR spento)
+      setSsr(false);
+      currentState = MAIN_MENU;
+      needsUpdate = true;
+      ignoreButtonUntil = millis() + 300;
+    } break;
+
     case RUNNING: {
       // zoom/pan rimossi (campo 05): short press nel RUNNING non fa nulla
     } break;
@@ -562,6 +595,17 @@ void handleLongPress() {
     case SLOW_RISE: {
       // do nothing
     } break;
+    case MANUAL: {
+      // long => toggle SSR manuale (bloccato senza sensore: fail-safe)
+      if (sensorError) {
+        Serial.println("[Manual] SSR bloccato: sensore non presente");
+        setSsr(false);
+      } else {
+        setSsr(!ssrState);
+      }
+      needsUpdate = true;
+    } break;
+
     case SOVRATEMP: {
       // si esce solo a mano
       currentState = MAIN_MENU;
@@ -599,7 +643,7 @@ void handleEncoder() {
 
   switch (currentState) {
     case MAIN_MENU: {
-      int maxIdx = programCount + 1;
+      int maxIdx = programCount + 2;
       selectedIndex += detents;
       if (selectedIndex < 0) selectedIndex = maxIdx;
       if (selectedIndex > maxIdx) selectedIndex = 0;

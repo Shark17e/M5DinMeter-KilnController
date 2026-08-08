@@ -17,7 +17,7 @@ void drawMainMenu() {
   else           DinMeter.Display.print("--%");
 
   // TEMP GRANDE a destra (size 4, intero, right-aligned, a metà altezza)
-  String tStr = String((int)(currentTemp + 0.5f)) + "C";
+  String tStr = sensorError ? "--" : (String((int)(currentTemp + 0.5f)) + "C");
   DinMeter.Display.setTextSize(4);
   DinMeter.Display.setTextColor(TFT_GREEN, TFT_BLACK);
   int tw = DinMeter.Display.textWidth(tStr.c_str());
@@ -28,7 +28,7 @@ void drawMainMenu() {
   constexpr int lineHeight = 24;
   int screenH = DinMeter.Display.height();
   int centerY = 84;
-  int maxIdx  = programCount + 1;
+  int maxIdx  = programCount + 2;
   for (int i = 0; i <= maxIdx; i++) {
     int y = centerY + (i - selectedIndex) * lineHeight;
     if (y < 34 || y > screenH) continue;
@@ -43,12 +43,11 @@ void drawMainMenu() {
       bool sel = (i == selectedIndex);
       DinMeter.Display.setTextSize(1);
       DinMeter.Display.setTextColor(TFT_WHITE, sel ? TFT_BLUE : TFT_BLACK);
-      if (i == programCount) {
-        DinMeter.Display.setCursor(10, y);
-        DinMeter.Display.print("Aggiungi Programma");
-      } else {
-        DinMeter.Display.setCursor(10, y);
-        DinMeter.Display.print("Spegni");
+      DinMeter.Display.setCursor(10, y);
+      switch (i - programCount) {
+        case 0: DinMeter.Display.print("Manuale"); break;
+        case 1: DinMeter.Display.print("Aggiungi Programma"); break;
+        default: DinMeter.Display.print("Spegni"); break;
       }
     }
   }
@@ -57,7 +56,7 @@ void drawMainMenu() {
 void updateMainMenuTemp() {
   if (millis() - lastTempDraw < 400) return;
   lastTempDraw = millis();
-  String tStr = String((int)(currentTemp + 0.5f)) + "C";
+  String tStr = sensorError ? "--" : (String((int)(currentTemp + 0.5f)) + "C");
   DinMeter.Display.setTextSize(4);
   DinMeter.Display.setTextColor(TFT_GREEN, TFT_BLACK);
   int tw = DinMeter.Display.textWidth(tStr.c_str());

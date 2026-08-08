@@ -182,3 +182,58 @@ void partialUpdateRunningState() {
     DinMeter.Display.print(lbl);
   }
 }
+
+// ------------------------------------------------
+// MANUAL: interruttore SSR manuale (campo 08)
+// short = esci, long = toggle SSR (bloccato senza sensore)
+// ------------------------------------------------
+void drawManualTempValue() {
+  DinMeter.Display.fillRect(0, 70, 240, 20, TFT_BLACK);
+  DinMeter.Display.setTextSize(2);
+  DinMeter.Display.setTextColor(sensorError ? TFT_RED : TFT_GREEN, TFT_BLACK);
+  DinMeter.Display.setCursor(4, 70);
+  if (sensorError) DinMeter.Display.print("SENSORE ERRORE!");
+  else DinMeter.Display.printf("TSens %dC", (int)(currentTemp + 0.5f));
+}
+
+void updateManualTempDraw() {
+  if (millis() - lastManualTempDraw < 400) return;
+  lastManualTempDraw = millis();
+  drawManualTempValue();
+}
+
+void drawManualScreen() {
+  DinMeter.Display.fillScreen(TFT_BLACK);
+
+  // Batteria a sinistra
+  int batt = DinMeter.Power.getBatteryLevel();
+  DinMeter.Display.setTextColor(TFT_RED, TFT_BLACK);
+  DinMeter.Display.setTextSize(2);
+  DinMeter.Display.setCursor(4, 0);
+  if (batt >= 0) DinMeter.Display.printf("%d%%", batt);
+  else DinMeter.Display.print("--%");
+
+  // Titolo centrato
+  DinMeter.Display.setTextSize(2);
+  DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+  int tw = DinMeter.Display.textWidth("MANUALE");
+  DinMeter.Display.setCursor((240 - tw) / 2, 2);
+  DinMeter.Display.print("MANUALE");
+
+  // Stato SSR grande
+  const char* ssrTxt = ssrState ? "SSR: ON" : "SSR: OFF";
+  DinMeter.Display.setTextSize(3);
+  DinMeter.Display.setTextColor(ssrState ? TFT_RED : TFT_GREEN, TFT_BLACK);
+  tw = DinMeter.Display.textWidth(ssrTxt);
+  DinMeter.Display.setCursor((240 - tw) / 2, 40);
+  DinMeter.Display.print(ssrTxt);
+
+  // Temperatura corrente
+  drawManualTempValue();
+
+  // Hint
+  DinMeter.Display.setTextSize(1);
+  DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+  DinMeter.Display.setCursor(4, 122);
+  DinMeter.Display.print("Short=Esci  Long=SSR");
+}
