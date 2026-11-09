@@ -1,96 +1,115 @@
 // ------------------------------------------------
-// RUNNING: testata 2 righe + grafico (campo 05)
+// RUNNING + MANUAL
 // ------------------------------------------------
-void drawRunningState() {
-  DinMeter.Display.fillScreen(TFT_BLACK);
-  partialUpdateRunningState();
-}
 
-// Passo etichette X automatico (campo 05): minimo 45px, arrotondato ai valori "belli"
+// Passo etichette X automatico: minimo 45px, valori "belli"
 const uint32_t NICE_TIME_STEPS[] = {60, 300, 600, 900, 1800, 3600, 7200, 14400, 21600, 43200, 86400};
 constexpr int  NICE_TIME_STEP_COUNT = sizeof(NICE_TIME_STEPS) / sizeof(NICE_TIME_STEPS[0]);
 
 uint32_t niceTimeStep(float windowSec) {
-  float minStep = 45.0f * windowSec / GRAPH_W;   // 45px minimi tra due etichette
+  float minStep = 45.0f * windowSec / GRAPH_W;
   for (int i = 0; i < NICE_TIME_STEP_COUNT; i++) {
     if ((float)NICE_TIME_STEPS[i] >= minStep) return NICE_TIME_STEPS[i];
   }
   return NICE_TIME_STEPS[NICE_TIME_STEP_COUNT - 1];
 }
 
+void drawRunningState() {
+  DinMeter.Display.fillScreen(COL_BG);
+  partialUpdateRunningState();
+}
+
 void partialUpdateRunningState() {
+  auto& d = DinMeter.Display;
   uint32_t now = millis();
 
-  // ---------- Testata: 2 righe (campo 05) ----------
-  DinMeter.Display.fillRect(0, 0, 240, RUN_TEXT_H, TFT_BLACK);
-  DinMeter.Display.setTextFont(1);
+  // ---------- Status bar: nome + batteria ----------
+  char nameBuf[30];
+  if (currentProgram) uiTruncate(currentProgram->name.c_str(), nameBuf, 28);
+  else                strcpy(nameBuf, "--");
+  uiTopBar(nameBuf);
 
-  // R1: nome+segmento | SSR+duty | batteria
   int seg = 0;
   if (currentProgram && programRunning) {
     seg = slowRiseWait ? slowRiseWaitSeg
                        : currentSegmentIndex((now - programStartTime) / 1000);
   }
-  DinMeter.Display.setTextSize(1);
-  DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-  DinMeter.Display.setCursor(4, 1);
-  if (currentProgram) {
-    if (programRunning) {
-      bool dwell = isDwellSegment(seg);
-      DinMeter.Display.printf("%s %s%d/%d", currentProgram->name.c_str(),
-                              dwell ? "TENUTA" : "RAMPA", seg, curveRTCount - 1);
-    } else if (programEndTime > programStartTime) {
-      // fine cottura: FINE · durata · SSR on-time
-      String t = elapsedTimeString(programEndTime - programStartTime);
-      String s = elapsedTimeString(ssrOnTotalTime * 1000UL);
-      DinMeter.Display.print("FINE ");
-      DinMeter.Display.print(t);
-      DinMeter.Display.print(" SSR ");
-      DinMeter.Display.print(s);
-    } else {
-      DinMeter.Display.print("Programma Terminato");
-    }
-  }
-  DinMeter.Display.setCursor(150, 1);
-  if (programRunning) {
-    DinMeter.Display.print(ssrState ? "SSR:ON " : "SSR:OFF ");
-    DinMeter.Display.print((int)(lastDuty + 0.5f));
-    DinMeter.Display.print("%");
-  }
-  int batt = battPct;
-  if (batt >= 0) {
-    DinMeter.Display.setTextColor(TFT_RED, TFT_BLACK);
-    DinMeter.Display.setCursor(214, 1);
-    DinMeter.Display.print(batt);
-    DinMeter.Display.print("%");
-  }
 
-  // R2: Tgt giallo | temp verde | tempo — tutto size 1 (campo 05)
-  DinMeter.Display.setCursor(4, 11);
-  DinMeter.Display.setTextColor(TFT_YELLOW, TFT_BLACK);
-  DinMeter.Display.printf("Tgt %.1fC", targetTemp);
-  DinMeter.Display.setTextColor(TFT_GREEN, TFT_BLACK);
-  DinMeter.Display.printf("  TSens %.1fC", currentTemp);
-
+  // ---------- Riga 2: setpoint, misura, tempo ----------
+  d.fillRect(0, 18, 240, 18, COL_BG);
+  d.setTextSize(1);
   if (programRunning) {
-    String totalStr = elapsedTimeString((uint32_t)(totalProgSeconds * 1000.0f));
-    String el = elapsedTimeString(now - programStartTime);
-    DinMeter.Display.setCursor(148, 11);
-    DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-    DinMeter.Display.print(el);
-    DinMeter.Display.print("/");
-    DinMeter.Display.print(totalStr);
+    d.setTextColor(COL_MUTED);
+    d.setCursor(6, 22);
+    d.print("Tgt");
+    d.setTextColor(COL_AMBER);
+    d.setCursor(26, 22);
+    d.printf("%.0fC", targetTemp);
+
+    d.setTextColor(COL_MUTED);
+    d.setCursor(82, 22);
+    d.print("Tsens");
+    d.setTextColor(COL_GREEN);
+    d.setCursor(114, 22);
+    d.printf("%.1fC", currentTemp);
+
+    String el = shortTimeLabel((now - programStartTime) / 1000);
+    String tot = shortTimeLabel((uint32_t)totalProgSeconds);
+    String tstr = el + "/" + tot;
+    int tw = d.textWidth(tstr.c_str());
+    d.setTextColor(COL_TEXT);
+    d.setCursor(234 - tw, 22);
+    d.print(tstr);
+  } else if (programEndTime > programStartTime) {
+    d.setTextColor(COL_GREEN);
+    d.setCursor(6, 22);
+    d.print("FINE");
+    String dur = "Durata ";
+    dur += shortTimeLabel((programEndTime - programStartTime) / 1000);
+    d.setTextColor(COL_MUTED);
+    d.setCursor(40, 22);
+    d.print(dur);
+    String ssr = "SSR ";
+    ssr += shortTimeLabel(ssrOnTotalTime / 1000);
+    d.setTextColor(COL_GREEN);
+    d.setCursor(150, 22);
+    d.print(ssr);
   }
 
   if (sensorError) {
-    DinMeter.Display.fillRect(0, 11, 240, 8, TFT_BLACK);
-    DinMeter.Display.setTextColor(TFT_RED, TFT_BLACK);
-    DinMeter.Display.setCursor(4, 11);
-    DinMeter.Display.print("SENSORE ERRORE!");
+    d.fillRect(0, 18, 240, 18, COL_BG);
+    d.fillRoundRect(4, 19, 232, 16, 4, COL_RED);
+    d.setTextColor(COL_BG);
+    d.setCursor(10, 23);
+    d.print("SENSORE ERRORE!  SSR OFF");
   }
 
-  // ---------- Grafico (campo 05: curva gialla + T verde + pallino, niente etichette Y) ----------
-  DinMeter.Display.fillRect(0, RUN_TEXT_H, 240, 135 - RUN_TEXT_H, TFT_BLACK);
+  // ---------- Grafico ----------
+  d.fillRoundRect(4, 36, 232, 97, 6, COL_SURFACE);
+
+  // Intestazione del grafico: segmento + SSR
+  if (currentProgram && programRunning) {
+    bool dwell = isDwellSegment(seg);
+    char segText[20];
+    snprintf(segText, sizeof(segText), "%s %d/%d", dwell ? "TENUTA" : "RAMPA", seg, curveRTCount - 1);
+    d.setTextSize(1);
+    d.setTextColor(dwell ? COL_AMBER : COL_CYAN);
+    d.setCursor(6, 38);
+    d.print(segText);
+
+    char ssrTxt[20];
+    snprintf(ssrTxt, sizeof(ssrTxt), "SSR %s %d%%", ssrState ? "ON" : "OFF", (int)(lastDuty + 0.5f));
+    int tw = d.textWidth(ssrTxt);
+    uiPill(230 - (tw + 12), 37, tw + 12, 13, ssrTxt,
+           ssrState ? COL_GREEN : COL_SURFACE2,
+           ssrState ? COL_BG : COL_MUTED);
+  } else if (currentProgram && programEndTime > programStartTime) {
+    d.setTextSize(1);
+    d.setTextColor(COL_GREEN);
+    d.setCursor(6, 38);
+    d.print("COTTURA COMPLETATA");
+  }
+
   if (!currentProgram) return;
 
   float tMin = 0.0f;
@@ -113,87 +132,106 @@ void partialUpdateRunningState() {
     return (int16_t)(GRAPH_X + frac * GRAPH_W);
   };
 
-  // assi Y e X
-  DinMeter.Display.drawLine(GRAPH_X - 1, GRAPH_Y, GRAPH_X - 1, GRAPH_Y + GRAPH_H, TFT_WHITE);
-  DinMeter.Display.drawLine(GRAPH_X - 1, GRAPH_Y + GRAPH_H, GRAPH_X + GRAPH_W, GRAPH_Y + GRAPH_H, TFT_WHITE);
-
-  // Etichette Y (temperatura), size 1, a sinistra dell'asse
-  constexpr int nTicks = 5;
-  float yStep = FIXED_Y_MAX / nTicks;
-  for (int i = 0; i <= nTicks; i++) {
-    float val = i * yStep;
+  // Griglia orizzontale (300/600/900)
+  for (int i = 1; i < 4; i++) {
+    float val = FIXED_Y_MAX * i / 4;
     int yy = mapTempToY(val);
-    DinMeter.Display.drawLine(GRAPH_X - 3, yy, GRAPH_X - 1, yy, TFT_WHITE);
-    char buf[8];
-    sprintf(buf, "%.0f", val);
-    DinMeter.Display.setCursor(GRAPH_X - 24, yy - 3);
-    DinMeter.Display.setTextColor(TFT_CYAN, TFT_BLACK);
-    DinMeter.Display.print(buf);
+    d.drawFastHLine(GRAPH_X, yy, GRAPH_W, COL_LINE);
   }
 
-  // Curva programmata (gialla)
+  // Griglia verticale ai tick temporali
+  uint32_t timeStep = niceTimeStep(window);
+  for (uint32_t tTick = timeStep; tTick < (uint32_t)window; tTick += timeStep) {
+    int xx = mapTimeToX((float)tTick);
+    d.drawFastVLine(xx, GRAPH_Y, GRAPH_H, COL_LINE);
+  }
+
+  // Assi
+  d.drawFastHLine(GRAPH_X, GRAPH_Y + GRAPH_H, GRAPH_W, COL_LINE);
+  d.drawFastVLine(GRAPH_X, GRAPH_Y, GRAPH_H, COL_LINE);
+
+  // Etichette Y
+  for (int i = 0; i <= 4; i++) {
+    float val = FIXED_Y_MAX * i / 4;
+    int yy = mapTempToY(val);
+    char buf[8];
+    sprintf(buf, "%.0f", val);
+    d.setTextSize(1);
+    d.setTextColor(COL_MUTED);
+    int tw = d.textWidth(buf);
+    int ty = (i == 0) ? yy - 9 : yy - 4;
+    int tx = GRAPH_X - tw - 2;
+    if (tx < 4) tx = 4;
+    d.setCursor(tx, ty);
+    d.print(buf);
+  }
+
+  // Curva programmata (ambra)
   {
     bool hasFirst = false;
     int16_t prevX = 0, prevY = 0;
     for (int i = 0; i < curveRTCount; i++) {
       int16_t x = mapTimeToX((float)curveRT[i].cumSec);
       int16_t y = mapTempToY(curveRT[i].temp);
-      if (hasFirst) DinMeter.Display.drawLine(prevX, prevY, x, y, TFT_YELLOW);
-      prevX = x; prevY = y;
+      if (hasFirst) d.drawWideLine(prevX, prevY, x, y, 1.0f, COL_AMBER);
+      prevX = x;
+      prevY = y;
       hasFirst = true;
     }
   }
 
-  // Storia temperatura (verde)
+  // Storia misurata (verde)
   if (sampleCount >= 2) {
     bool hasFirst = false;
     int16_t prevX = 0, prevY = 0;
     for (int c = 0; c < sampleCount; c++) {
       int16_t x = mapTimeToX((float)samples[c].sec);
       int16_t y = mapTempToY(samples[c].temp);
-      if (hasFirst) DinMeter.Display.drawLine(prevX, prevY, x, y, TFT_GREEN);
-      prevX = x; prevY = y;
+      if (hasFirst) d.drawWideLine(prevX, prevY, x, y, 0.5f, COL_GREEN);
+      prevX = x;
+      prevY = y;
       hasFirst = true;
     }
   }
 
-  // Pallino bianco: posizione sulla curva (tempo trascorso, setpoint attuale)
+  // Pallino di posizione
   if (programRunning) {
     float elapsed = (now - programStartTime) / 1000.0f;
     int16_t px = mapTimeToX(elapsed);
     int16_t py = mapTempToY(targetTemp);
     if (px >= GRAPH_X && px <= GRAPH_X + GRAPH_W) {
-      DinMeter.Display.fillCircle(px, py, 3, TFT_WHITE);
-      DinMeter.Display.drawCircle(px, py, 3, TFT_BLACK);
+      d.fillCircle(px, py, 3, COL_TEXT);
+      d.drawCircle(px, py, 4, COL_CYAN);
     }
   }
 
-  // Etichette X a passo auto (min 45px), formato 2h30m, taglio bordi
-  uint32_t timeStep = niceTimeStep(window);
+  // Etichette X
   for (uint32_t tTick = 0; tTick <= (uint32_t)window; tTick += timeStep) {
     int xx = mapTimeToX((float)tTick);
-    DinMeter.Display.drawLine(xx, GRAPH_Y + GRAPH_H, xx, GRAPH_Y + GRAPH_H + 3, TFT_WHITE);
+    d.drawFastVLine(xx, GRAPH_Y + GRAPH_H, 3, COL_LINE);
     String lbl = shortTimeLabel(tTick);
     int lxx = xx - 10;
     if (lxx < GRAPH_X) lxx = GRAPH_X;
-    if (lxx + 30 > GRAPH_X + GRAPH_W) lxx = GRAPH_X + GRAPH_W - 30;
-    DinMeter.Display.setCursor(lxx, GRAPH_Y + GRAPH_H + 4);
-    DinMeter.Display.setTextColor(TFT_CYAN, TFT_BLACK);
-    DinMeter.Display.print(lbl);
+    int tw = d.textWidth(lbl.c_str());
+    if (lxx + tw > GRAPH_X + GRAPH_W) lxx = GRAPH_X + GRAPH_W - tw;
+    d.setTextColor(COL_MUTED);
+    d.setCursor(lxx, GRAPH_Y + GRAPH_H + 3);
+    d.print(lbl);
   }
 }
 
 // ------------------------------------------------
-// MANUAL: interruttore SSR manuale (campo 08)
+// MANUAL: interruttore SSR manuale
 // short = esci, long = toggle SSR (bloccato senza sensore)
 // ------------------------------------------------
 void drawManualTempValue() {
-  DinMeter.Display.fillRect(0, 70, 240, 20, TFT_BLACK);
-  DinMeter.Display.setTextSize(2);
-  DinMeter.Display.setTextColor(sensorError ? TFT_RED : TFT_GREEN, TFT_BLACK);
-  DinMeter.Display.setCursor(4, 70);
-  if (sensorError) DinMeter.Display.print("SENSORE ERRORE!");
-  else DinMeter.Display.printf("TSens %dC", (int)(currentTemp + 0.5f));
+  auto& d = DinMeter.Display;
+  d.fillRect(12, 88, 216, 22, COL_BG);
+  d.setTextSize(2);
+  d.setTextColor(sensorError ? COL_RED : COL_GREEN);
+  d.setCursor(16, 90);
+  if (sensorError) d.print("SENSORE ERRORE!");
+  else             d.printf("Tsens %.1fC", currentTemp);
 }
 
 void updateManualTempDraw() {
@@ -209,32 +247,24 @@ void updateManualTempDraw() {
 }
 
 void drawManualScreen() {
-  DinMeter.Display.fillScreen(TFT_BLACK);
+  auto& d = DinMeter.Display;
+  d.fillScreen(COL_BG);
+  uiTopBar("MANUALE");
 
-  // Batteria a sinistra
-  drawBatteryPct();
+  uint16_t col = sensorError ? COL_RED : (ssrState ? COL_GREEN : COL_MUTED);
+  d.fillRoundRect(12, 26, 216, 54, 8, COL_SURFACE);
+  d.fillCircle(38, 53, 11, col);
+  d.setTextSize(3);
+  d.setTextColor(col);
+  d.setCursor(58, 40);
+  d.print(ssrState ? "SSR ON" : "SSR OFF");
 
-  // Titolo centrato
-  DinMeter.Display.setTextSize(2);
-  DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-  int tw = DinMeter.Display.textWidth("MANUALE");
-  DinMeter.Display.setCursor((240 - tw) / 2, 2);
-  DinMeter.Display.print("MANUALE");
-
-  // Stato SSR grande
-  const char* ssrTxt = ssrState ? "SSR: ON" : "SSR: OFF";
-  DinMeter.Display.setTextSize(3);
-  DinMeter.Display.setTextColor(ssrState ? TFT_RED : TFT_GREEN, TFT_BLACK);
-  tw = DinMeter.Display.textWidth(ssrTxt);
-  DinMeter.Display.setCursor((240 - tw) / 2, 40);
-  DinMeter.Display.print(ssrTxt);
-
-  // Temperatura corrente
   drawManualTempValue();
 
-  // Hint
-  DinMeter.Display.setTextSize(1);
-  DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-  DinMeter.Display.setCursor(4, 122);
-  DinMeter.Display.print("Short=Esci  Long=SSR");
+  d.setTextSize(1);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(12, 120);
+  d.print("SHORT  Esci");
+  d.setCursor(132, 120);
+  d.print("LONG  SSR");
 }

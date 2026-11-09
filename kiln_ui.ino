@@ -37,59 +37,82 @@ void updateBattery() {
   }
 }
 
-// Ridisegna la sola area batteria (menu e manuale): (4,0), size 2.
+// Ridisegna l'area batteria della status bar.
 void drawBatteryPct() {
-  int batt = battPct;
-  DinMeter.Display.fillRect(0, 0, 60, 16, TFT_BLACK);
-  DinMeter.Display.setTextSize(2);
-  DinMeter.Display.setTextColor(TFT_RED, TFT_BLACK);
-  DinMeter.Display.setCursor(4, 0);
-  if (batt >= 0) DinMeter.Display.printf("%d%%", batt);
-  else           DinMeter.Display.print("--%");
+  DinMeter.Display.fillRect(184, 0, 56, 17, COL_SURFACE);
+  uiBattery(192, 4);
+  DinMeter.Display.drawFastHLine(0, 17, 240, COL_LINE);
+}
+
+// Hero del menu: etichetta, temperatura grande, stato sensore.
+void drawMainMenuHero() {
+  auto& d = DinMeter.Display;
+  d.fillRect(0, 18, 240, 48, COL_BG);
+
+  d.setTextSize(1);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(10, 23);
+  d.print("TEMP FORNO");
+
+  String tStr = sensorError ? "--" : String((int)(currentTemp + 0.5f));
+  d.setTextSize(4);
+  d.setTextColor(sensorError ? COL_RED : COL_GREEN);
+  d.setCursor(10, 33);
+  d.print(tStr);
+  int tw = d.textWidth(tStr.c_str());
+  d.setTextSize(2);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(10 + tw + 4, 51);
+  d.print("C");
+
+  uint16_t col = sensorError ? COL_RED : COL_GREEN;
+  d.fillRoundRect(176, 28, 58, 30, 6, COL_SURFACE);
+  d.setTextSize(1);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(184, 32);
+  d.print("SENSORE");
+  d.setTextColor(col);
+  d.setCursor(184, 43);
+  d.print(sensorError ? "ERRORE" : "OK");
 }
 
 // ------------------------------------------------
-// MAIN_MENU (campo 05): batteria a sinistra, TEMP GRANDE a destra, righe 24px
+// MAIN_MENU
 // ------------------------------------------------
 void drawMainMenu() {
-  DinMeter.Display.fillScreen(TFT_BLACK);
+  DinMeter.Display.fillScreen(COL_BG);
+  uiTopBar("M5 KILN");
+  drawMainMenuHero();
 
-  // Batteria a sinistra (size 2), rossa ovunque (campo 05)
-  drawBatteryPct();
-
-  // TEMP GRANDE a destra (size 4, intero, right-aligned, a metà altezza)
-  String tStr = sensorError ? "--" : (String((int)(currentTemp + 0.5f)) + "C");
-  DinMeter.Display.setTextSize(4);
-  DinMeter.Display.setTextColor(TFT_GREEN, TFT_BLACK);
-  int tw = DinMeter.Display.textWidth(tStr.c_str());
-  DinMeter.Display.setCursor(236 - tw, 51);
-  DinMeter.Display.print(tStr);
-
-  // Lista programmi, righe 24px, ~4 visibili
-  constexpr int lineHeight = 24;
-  int screenH = DinMeter.Display.height();
-  int centerY = 84;
+  // Lista: 4 righe visibili, selezione centrata a y=84.
+  constexpr int lineHeight = 17;
+  int centerY = 92;
   int maxIdx  = programCount + 2;
   for (int i = 0; i <= maxIdx; i++) {
-    int y = centerY + (i - selectedIndex) * lineHeight;
-    if (y < 34 || y > screenH) continue;
+    int y = centerY + (i - selectedIndex) * lineHeight - 8;
+    if (y < 66 || y > 118) continue;
 
+    bool sel = (i == selectedIndex);
+    if (sel) {
+      DinMeter.Display.fillRoundRect(6, y, 228, 16, 4, COL_SURFACE2);
+      DinMeter.Display.fillRect(6, y, 3, 16, COL_CYAN);
+    }
+    DinMeter.Display.setTextSize(1);
+    DinMeter.Display.setTextColor(sel ? COL_TEXT : COL_MUTED);
+    DinMeter.Display.setCursor(14, y + 4);
     if (i < programCount) {
-      bool sel = (i == selectedIndex);
-      DinMeter.Display.setTextSize(1);
-      DinMeter.Display.setTextColor(TFT_WHITE, sel ? TFT_BLUE : TFT_BLACK);
-      DinMeter.Display.setCursor(10, y);
       DinMeter.Display.print(programs[i].name);
+    } else if (i == programCount) {
+      DinMeter.Display.print("Manuale");
+    } else if (i == programCount + 1) {
+      DinMeter.Display.print("Aggiungi Programma");
     } else {
-      bool sel = (i == selectedIndex);
-      DinMeter.Display.setTextSize(1);
-      DinMeter.Display.setTextColor(TFT_WHITE, sel ? TFT_BLUE : TFT_BLACK);
-      DinMeter.Display.setCursor(10, y);
-      switch (i - programCount) {
-        case 0: DinMeter.Display.print("Manuale"); break;
-        case 1: DinMeter.Display.print("Aggiungi Programma"); break;
-        default: DinMeter.Display.print("Spegni"); break;
-      }
+      DinMeter.Display.print("Spegni");
+    }
+    if (sel) {
+      DinMeter.Display.setTextColor(COL_CYAN);
+      DinMeter.Display.setCursor(226, y + 4);
+      DinMeter.Display.print(">");
     }
   }
 }
@@ -101,43 +124,59 @@ void updateMainMenuTemp() {
     lastBattDraw = millis();
     drawBatteryPct();
   }
-  if (millis() - lastTempDraw < 400) return;
-  lastTempDraw = millis();
-  String tStr = sensorError ? "--" : (String((int)(currentTemp + 0.5f)) + "C");
-  DinMeter.Display.setTextSize(4);
-  DinMeter.Display.setTextColor(TFT_GREEN, TFT_BLACK);
-  int tw = DinMeter.Display.textWidth(tStr.c_str());
-  DinMeter.Display.fillRect(236 - tw, 51, 240, 32, TFT_BLACK);
-  DinMeter.Display.setCursor(236 - tw, 51);
-  DinMeter.Display.print(tStr);
+  // Hero: ridisegna solo quando cambia il valore mostrato o lo stato sensore
+  static int  lastShown = -9999;
+  static bool lastErr   = false;
+  int shown = sensorError ? -9999 : (int)(currentTemp + 0.5f);
+  if (shown != lastShown || sensorError != lastErr) {
+    lastShown = shown;
+    lastErr   = sensorError;
+    drawMainMenuHero();
+  }
 }
 
 // ------------------------------------------------
 // CONFIRM_DELETE
 // ------------------------------------------------
 void handleConfirmDelete() {
-  if (needsUpdate) {
-    DinMeter.Display.fillScreen(TFT_BLACK);
-    DinMeter.Display.setTextColor(TFT_RED);
-    DinMeter.Display.setTextFont(1);
-    DinMeter.Display.setTextSize(1);
+  if (!needsUpdate) return;
+  auto& d = DinMeter.Display;
+  d.fillScreen(COL_BG);
+  uiTopBar("ELIMINA");
 
-    DinMeter.Display.setCursor(10, 10);
-    if (deleteIndex >= 0 && deleteIndex < programCount) {
-      DinMeter.Display.println("Cancellare il Programma:");
-      DinMeter.Display.setCursor(10, 30);
-      DinMeter.Display.print("'");
-      DinMeter.Display.print(programs[deleteIndex].name);
-      DinMeter.Display.println("'");
-    } else {
-      DinMeter.Display.println("Cancellare ???");
-    }
-    DinMeter.Display.setCursor(10, 60);
-    DinMeter.Display.println("Short => Conferma");
-    DinMeter.Display.setCursor(70, 72);
-    DinMeter.Display.println("Long => Annulla");
-    needsUpdate = false;
-  }
+  d.fillRoundRect(8, 24, 224, 58, 8, COL_SURFACE);
+  d.setTextSize(1);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(16, 30);
+  d.print("PROGRAMMA SELEZIONATO");
+
+  char nb[18];
+  if (deleteIndex >= 0 && deleteIndex < programCount)
+    uiTruncate(programs[deleteIndex].name.c_str(), nb, 17);
+  else
+    strcpy(nb, "???");
+  d.setTextSize(2);
+  d.setTextColor(COL_TEXT);
+  int tw = d.textWidth(nb);
+  d.setCursor(8 + (224 - tw) / 2, 48);
+  d.print(nb);
+
+  d.setTextSize(1);
+  d.fillRoundRect(8, 90, 108, 36, 6, COL_GREEN);
+  d.setTextColor(COL_BG);
+  d.setCursor(8 + (108 - d.textWidth("SHORT")) / 2, 96);
+  d.print("SHORT");
+  d.setCursor(8 + (108 - d.textWidth("CONFERMA")) / 2, 108);
+  d.print("CONFERMA");
+
+  d.fillRoundRect(124, 90, 108, 36, 6, COL_RED);
+  d.setTextColor(COL_BG);
+  d.setCursor(124 + (108 - d.textWidth("LONG")) / 2, 96);
+  d.print("LONG");
+  d.setCursor(124 + (108 - d.textWidth("ANNULLA")) / 2, 108);
+  d.print("ANNULLA");
+
+  needsUpdate = false;
 }
 
 void deleteProgram(int idx) {
@@ -156,51 +195,79 @@ void deleteProgram(int idx) {
 // SLOW_RISE (campo 07): salita lenta, scelta dell'utente
 // ------------------------------------------------
 void drawSlowRise() {
-  DinMeter.Display.fillScreen(TFT_BLACK);
-  DinMeter.Display.setTextSize(1);
-  DinMeter.Display.setTextColor(TFT_YELLOW, TFT_BLACK);
-  DinMeter.Display.setCursor(10, 8);
-  DinMeter.Display.println("SALITA LENTA");
+  auto& d = DinMeter.Display;
+  d.fillScreen(COL_BG);
 
-  DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-  DinMeter.Display.setCursor(10, 24);
+  // Banner di allarme
+  d.fillRoundRect(6, 6, 228, 30, 6, COL_SURFACE);
+  d.fillTriangle(18, 12, 18, 30, 32, 21, COL_AMBER);
+  d.setTextSize(2);
+  d.setTextColor(COL_AMBER);
+  d.setCursor(38, 14);
+  d.print("SALITA LENTA");
+  uiBattery(190, 12);
+
+  // Contesto
   float gap = targetTemp - currentTemp;
+  d.setTextSize(1);
+  d.setTextColor(COL_TEXT);
+  d.setCursor(10, 42);
   if (gap >= 0.0f)
-    DinMeter.Display.printf("Forno %.0fC sotto la curva da 1h", gap);
+    d.printf("Forno %.0fC sotto la curva da 1h", gap);
   else
-    DinMeter.Display.printf("Forno %.0fC sopra la curva da 1h", -gap);
+    d.printf("Forno %.0fC sopra la curva da 1h", -gap);
 
+  // Opzioni
   const char* opts[3] = {"Aspetta che recuperi", "Allunga di 30 min", "Annulla cottura"};
   for (int i = 0; i < 3; i++) {
-    int y = 46 + i * 26;
+    int y = 56 + i * 22;
     bool sel = (slowRiseSel == (uint8_t)i);
-    DinMeter.Display.fillRect(10, y, 220, 22, sel ? TFT_BLUE : TFT_BLACK);
-    DinMeter.Display.setCursor(16, y + 5);
-    DinMeter.Display.setTextColor(TFT_WHITE, sel ? TFT_BLUE : TFT_BLACK);
-    DinMeter.Display.print(opts[i]);
+    d.fillRoundRect(8, y, 224, 20, 4, sel ? COL_CYAN : COL_SURFACE);
+    if (!sel) d.drawRoundRect(8, y, 224, 20, 4, COL_LINE);
+    d.setTextSize(1);
+    d.setTextColor(sel ? COL_BG : COL_TEXT);
+    d.setCursor(16, y + 6);
+    d.print(opts[i]);
   }
 
-  // Spiegazione breve della voce selezionata (riga in basso, 8 px)
+  // Spiegazione della voce selezionata
   const char* hints[3] = {"poi riprende la curva", "aggiunge 30 min alla curva", "ferma il programma"};
-  DinMeter.Display.setTextColor(TFT_CYAN, TFT_BLACK);
-  DinMeter.Display.setCursor(10, 124);
-  DinMeter.Display.print(hints[slowRiseSel]);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(10, 124);
+  d.print(hints[slowRiseSel]);
 }
 
 // ------------------------------------------------
 // SOVRATEMP (campo 07): allarme, si esce solo a mano
 // ------------------------------------------------
 void drawOverTemp() {
-  DinMeter.Display.fillScreen(TFT_RED);
-  DinMeter.Display.setTextColor(TFT_BLACK, TFT_RED);
-  DinMeter.Display.setCursor(30, 40);
-  DinMeter.Display.setTextSize(3);
-  DinMeter.Display.print("SOVRATEMP!");
-  DinMeter.Display.setTextSize(1);
-  DinMeter.Display.setCursor(30, 88);
-  DinMeter.Display.print("SSR spento.");
-  DinMeter.Display.setCursor(30, 100);
-  DinMeter.Display.print("Long => esci");
+  auto& d = DinMeter.Display;
+  d.fillScreen(COL_RED);
+  d.fillRoundRect(10, 14, 220, 107, 8, COL_BG);
+  d.drawRoundRect(10, 14, 220, 107, 8, COL_RED);
+
+  // Triangolo di allarme
+  d.fillTriangle(120, 26, 102, 56, 138, 56, COL_RED);
+
+  d.setTextSize(3);
+  d.setTextColor(COL_RED);
+  const char* title = "SOVRATEMP!";
+  int tw = d.textWidth(title);
+  d.setCursor((240 - tw) / 2, 64);
+  d.print(title);
+
+  d.setTextSize(1);
+  d.setTextColor(COL_MUTED);
+  const char* l1 = "SSR SPENTO";
+  tw = d.textWidth(l1);
+  d.setCursor((240 - tw) / 2, 96);
+  d.print(l1);
+
+  d.setTextColor(COL_TEXT);
+  const char* l2 = "LONG PRESS PER USCIRE";
+  tw = d.textWidth(l2);
+  d.setCursor((240 - tw) / 2, 110);
+  d.print(l2);
 }
 
 // ------------------------------------------------
@@ -240,31 +307,49 @@ String shortTimeLabel(uint32_t sec) {
 // ADD_PROG_NAME
 // ------------------------------------------------
 void drawAddProgName() {
-  DinMeter.Display.fillScreen(TFT_BLACK);
-  DinMeter.Display.setTextSize(1);
-  DinMeter.Display.setTextColor(TFT_WHITE);
-  DinMeter.Display.setCursor(10, 10);
-  DinMeter.Display.println("Inserisci Nome Programma:");
+  auto& d = DinMeter.Display;
+  d.fillScreen(COL_BG);
+  uiTopBar("NUOVO PROGRAMMA");
 
-  DinMeter.Display.setTextColor(TFT_GREEN);
-  DinMeter.Display.setCursor(10, 30);
-  DinMeter.Display.println("Nome attuale:");
-  DinMeter.Display.setCursor(10, 42);
-  DinMeter.Display.println(inputName);
+  d.setTextSize(1);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(10, 24);
+  d.print("NOME");
+
+  d.fillRoundRect(8, 34, 224, 20, 4, COL_SURFACE);
+  d.setCursor(14, 40);
+  if (inputName.length() == 0) {
+    d.setTextColor(COL_MUTED);
+    d.print("(vuoto)");
+  } else {
+    d.setTextColor(COL_TEXT);
+    d.print(inputName);
+  }
 
   int alphaLen = strlen(ALPHABET);
   char c = ALPHABET[currentCharIndex % alphaLen];
 
-  DinMeter.Display.setTextColor(TFT_WHITE);
-  DinMeter.Display.setCursor(10, 60);
-  DinMeter.Display.print("Caratt. attuale: ");
-  DinMeter.Display.println(String(c));
+  d.fillRoundRect(8, 62, 46, 46, 8, COL_SURFACE2);
+  d.setTextSize(4);
+  d.setTextColor(COL_CYAN);
+  char cs[2] = { (char)(c == ' ' ? '_' : c), 0 };
+  int tw = d.textWidth(cs);
+  d.setCursor(8 + (46 - tw) / 2, 69);
+  d.print(cs);
 
-  DinMeter.Display.setTextColor(TFT_GREEN);
-  DinMeter.Display.setCursor(10, 80);
-  DinMeter.Display.println("Short => Aggiunge il carattere");
-  DinMeter.Display.setCursor(10, 92);
-  DinMeter.Display.println("Long  => Conferma il nome");
+  d.setTextSize(1);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(64, 66);
+  d.print("CARATTERE");
+  d.setTextColor(COL_TEXT);
+  d.setCursor(64, 78);
+  d.print(c == ' ' ? "SPAZIO" : "RUOTA per cambiare");
+
+  d.setTextColor(COL_MUTED);
+  d.setCursor(10, 116);
+  d.print("RUOTA cambia  SHORT aggiunge");
+  d.setCursor(10, 126);
+  d.print("LONG conferma nome");
 }
 
 // ------------------------------------------------
@@ -273,14 +358,13 @@ void drawAddProgName() {
 // Barra comandi = 8 celle: < T t > +P -P + Salva/Annulla
 // Ruota barra per muovere la selezione; T/t = modifica valore (encoder ±, short conferma).
 void drawAddProgEdit() {
-  DinMeter.Display.fillScreen(TFT_BLACK);
-  DinMeter.Display.setTextSize(1);
-  DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-  DinMeter.Display.setCursor(4, 2);
-  DinMeter.Display.printf("Editor: %s  (%d pt)", newProgram.name.c_str(), newProgram.pointCount);
+  auto& d = DinMeter.Display;
+  d.fillScreen(COL_BG);
+  uiTopBar("EDITOR");
 
-  // Grafico: asse Y 0..1200, asse X 0..durata totale
-  constexpr int gx = 30, gy = 12, gw = 206, gh = 56;
+  // Grafico in una card
+  d.fillRoundRect(4, 18, 232, 62, 6, COL_SURFACE);
+  constexpr int gx = 30, gy = 22, gw = 204, gh = 52;
   uint32_t total = (newProgram.pointCount > 0) ? newProgram.points[newProgram.pointCount - 1].cumSec : 1;
   if (total == 0) total = 1;
 
@@ -292,68 +376,63 @@ void drawAddProgEdit() {
     return y;
   };
 
-  // assi e tacche Y
-  DinMeter.Display.drawLine(gx - 1, gy, gx - 1, gy + gh, TFT_WHITE);
-  DinMeter.Display.drawLine(gx - 1, gy + gh, gx + gw, gy + gh, TFT_WHITE);
-  for (int i = 0; i <= 4; i++) {
-    float val = FIXED_Y_MAX * i / 4;
-    int yy = yOf(val);
-    DinMeter.Display.drawLine(gx - 3, yy, gx - 1, yy, TFT_WHITE);
+  // Griglia orizzontale
+  for (int i = 1; i < 4; i++) {
+    int yy = yOf(FIXED_Y_MAX * i / 4);
+    d.drawFastHLine(gx, yy, gw, COL_LINE);
   }
+  // Assi
+  d.drawFastHLine(gx, gy + gh, gw, COL_LINE);
+  d.drawFastVLine(gx, gy, gh, COL_LINE);
 
   // P0 grigio: (0, startTemp)
   int p0x = xOf(0);
   int p0y = yOf(startTemp);
-  DinMeter.Display.fillCircle(p0x, p0y, 2, TFT_DARKGREY);
+  d.fillCircle(p0x, p0y, 2, COL_MUTED);
 
-  // spezzata della curva
+  // Spezzata della curva
   int prevX = p0x, prevY = p0y;
   for (uint8_t i = 0; i < newProgram.pointCount; i++) {
     int cx = xOf(newProgram.points[i].cumSec);
     int cy = yOf(newProgram.points[i].temp);
-    uint16_t col = (i == editingPointIndex) ? TFT_BLUE : TFT_CYAN;
-    DinMeter.Display.drawLine(prevX, prevY, cx, cy, col);
-    DinMeter.Display.fillCircle(cx, cy, (i == editingPointIndex) ? 3 : 2, col);
+    d.drawWideLine(prevX, prevY, cx, cy, 1.0f, COL_CYAN);
+    if (i == editingPointIndex) {
+      d.fillCircle(cx, cy, 3, COL_AMBER);
+      d.drawCircle(cx, cy, 5, COL_AMBER);
+    } else {
+      d.fillCircle(cx, cy, 2, COL_CYAN);
+    }
     prevX = cx;
     prevY = cy;
   }
 
-  // riga valore del punto selezionato: evidenzia il campo attivo (T o t)
+  // Riga valore del punto selezionato
   Point &p = newProgram.points[editingPointIndex];
   String tLabel = shortTimeLabel(p.cumSec);
-  DinMeter.Display.setCursor(3, 72);
-  DinMeter.Display.setTextColor(editingTempField ? TFT_YELLOW : TFT_GREEN, TFT_BLACK);
-  DinMeter.Display.print(String(editingPointIndex + 1) + ": T=");
-  DinMeter.Display.print((int)p.temp);
-  DinMeter.Display.setTextColor(editingTempField ? TFT_GREEN : TFT_YELLOW, TFT_BLACK);
-  DinMeter.Display.print("C  t=");
-  DinMeter.Display.print(tLabel);
-  DinMeter.Display.print(fieldEditMode ? " (RUOTA)" : "");
+  d.fillRoundRect(4, 82, 232, 16, 4, COL_SURFACE);
+  d.setTextSize(1);
+  d.setCursor(10, 86);
+  d.setTextColor(COL_MUTED);
+  d.printf("P%d", editingPointIndex + 1);
+  d.setCursor(34, 86);
+  d.setTextColor((fieldEditMode && editingTempField) ? COL_AMBER : COL_TEXT);
+  d.printf("T %.0fC", p.temp);
+  d.setCursor(104, 86);
+  d.setTextColor((fieldEditMode && !editingTempField) ? COL_CYAN : COL_TEXT);
+  d.printf("t %s", tLabel.c_str());
+  if (fieldEditMode) {
+    d.setTextColor(COL_MUTED);
+    d.setCursor(190, 86);
+    d.print("RUOTA");
+  }
 
-  // barra comandi riga 1: <  T  t  >  +P  -P
-  // (solo caratteri ASCII: le frecce Unicode ◀▶ non esistono nel font 6x8)
+  // Barra comandi
   const char* labels1[6] = {"<", "T", "t", ">", "+P", "-P"};
   for (int i = 0; i < 6; i++) {
-    int bx = i * 40;
-    bool sel = (editorSel == i);
-    uint16_t fill = sel ? TFT_BLUE : TFT_DARKGREY;
-    DinMeter.Display.fillRect(bx, 90, 40, 20, fill);
-    DinMeter.Display.drawRect(bx, 90, 40, 20, TFT_WHITE);
-    DinMeter.Display.setCursor(bx + 4, 94);
-    DinMeter.Display.setTextColor(TFT_WHITE, fill);
-    DinMeter.Display.print(labels1[i]);
+    uiButton(2 + i * 39, 100, 38, 16, labels1[i], editorSel == i);
   }
-  // riga 2: [Salva][Annulla]
-  const char* labels2[2] = {"Salva", "Annulla"};
-  for (int i = 0; i < 2; i++) {
-    int bx = i * 120;
-    bool sel = (editorSel == 6 + i);
-    DinMeter.Display.fillRect(bx, 115, 118, 18, sel ? TFT_BLUE : TFT_DARKGREY);
-    DinMeter.Display.drawRect(bx, 115, 118, 18, TFT_WHITE);
-    DinMeter.Display.setCursor(bx + 40, 118);
-    DinMeter.Display.setTextColor(TFT_WHITE, sel ? TFT_BLUE : TFT_DARKGREY);
-    DinMeter.Display.print(labels2[i]);
-  }
+  uiButton(2, 118, 116, 16, "Salva", editorSel == 6);
+  uiButton(120, 118, 116, 16, "Annulla", editorSel == 7);
 }
 
 void handleAddProgEditShortPress() {

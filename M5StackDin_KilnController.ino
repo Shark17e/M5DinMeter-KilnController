@@ -35,11 +35,27 @@ constexpr uint32_t SLOW_RISE_EXTEND_S = 1800;      // "Allunga 30 min" per ogni 
 constexpr char ALPHABET[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_ ";
 
 // Graph Layout Constants
-constexpr int RUN_TEXT_H = 20;
-constexpr int GRAPH_X    = 24;
-constexpr int GRAPH_Y    = 24;
-constexpr int GRAPH_W    = 210;
-constexpr int GRAPH_H    = 98;
+constexpr int RUN_TEXT_H = 36;
+constexpr int GRAPH_X    = 28;
+constexpr int GRAPH_Y    = 52;
+constexpr int GRAPH_W    = 202;
+constexpr int GRAPH_H    = 64;
+
+// ------------------------------------------------
+// UI theme (RGB565)
+// ------------------------------------------------
+#define KRGB(r, g, b) ((uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3)))
+constexpr uint16_t COL_BG       = KRGB(8, 12, 20);
+constexpr uint16_t COL_SURFACE  = KRGB(18, 26, 38);
+constexpr uint16_t COL_SURFACE2 = KRGB(30, 41, 59);
+constexpr uint16_t COL_LINE     = KRGB(51, 65, 85);
+constexpr uint16_t COL_TEXT     = KRGB(241, 245, 249);
+constexpr uint16_t COL_MUTED    = KRGB(148, 163, 184);
+constexpr uint16_t COL_CYAN     = KRGB(34, 211, 238);
+constexpr uint16_t COL_AMBER    = KRGB(251, 191, 36);
+constexpr uint16_t COL_GREEN    = KRGB(52, 211, 153);
+constexpr uint16_t COL_RED      = KRGB(248, 113, 113);
+constexpr uint16_t COL_BLUE     = KRGB(96, 165, 250);
 
 // ------------------------------------------------
 // Global Objects / Variables
@@ -217,6 +233,11 @@ void drawManualScreen();
 void updateManualTempDraw();
 void updateBattery();
 void drawBatteryPct();
+void uiBattery(int x, int y);
+void uiTopBar(const char* title);
+void uiButton(int x, int y, int w, int h, const char* label, bool sel);
+void uiTruncate(const char* src, char* dst, size_t maxChars);
+void drawMainMenuHero();
 
 void drawRunningState();
 void partialUpdateRunningState();
@@ -256,11 +277,20 @@ void setup() {
   gpio_set_drive_capability((gpio_num_t)SSR_PIN, GPIO_DRIVE_CAP_3);
 
   DinMeter.Display.setRotation(1);
-  DinMeter.Display.fillScreen(TFT_BLACK);
-  DinMeter.Display.setTextColor(TFT_GREEN);
   DinMeter.Display.setTextFont(1);
+  DinMeter.Display.fillScreen(COL_BG);
+  DinMeter.Display.setTextSize(3);
+  DinMeter.Display.setTextColor(COL_CYAN);
+  int splashW = DinMeter.Display.textWidth("M5 KILN");
+  DinMeter.Display.setCursor((240 - splashW) / 2, 26);
+  DinMeter.Display.print("M5 KILN");
   DinMeter.Display.setTextSize(1);
-  DinMeter.Display.drawString("Inizializzazione...", 10, 10);
+  DinMeter.Display.setTextColor(COL_MUTED);
+  splashW = DinMeter.Display.textWidth("CERAMIC KILN CONTROLLER");
+  DinMeter.Display.setCursor((240 - splashW) / 2, 60);
+  DinMeter.Display.print("CERAMIC KILN CONTROLLER");
+  DinMeter.Display.drawRoundRect(40, 90, 160, 10, 5, COL_LINE);
+  DinMeter.Display.fillRoundRect(42, 92, 156, 6, 3, COL_CYAN);
   delay(1500);
 
   Wire.begin(13, 15, 400000L);
