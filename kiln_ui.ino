@@ -260,7 +260,9 @@ void drawSlowRise() {
 
   // Banner di allarme
   d.fillRoundRect(6, 6, 228, 30, 6, COL_SURFACE);
-  d.fillTriangle(18, 12, 18, 30, 32, 21, COL_AMBER);
+  d.fillTriangle(25, 11, 14, 30, 36, 30, COL_AMBER);
+  d.fillRect(24, 17, 2, 7, COL_SURFACE);
+  d.fillRect(24, 26, 2, 2, COL_SURFACE);
   d.setTextSize(2);
   d.setTextColor(COL_AMBER);
   d.setCursor(38, 14);
