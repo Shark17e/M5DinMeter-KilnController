@@ -167,7 +167,9 @@ you start with 2 points and add/remove them as needed.
 - Command bar (ASCII only — the 6x8 font has no Unicode arrows):
   - `<` / `>` — select previous/next point;
   - `T` — edit **temperature** (encoder ±5 °C per detent, short press to confirm);
-  - `t` — edit **time** (encoder ±5 min per detent, short press to confirm);
+  - `t` — duration of the segment from the previous point (encoder ±5 min; the point's
+    cumulative time changes accordingly, short press to confirm);
+  - `t Tot.` — cumulative time from program start to the selected point (read-only);
   - `+P` — add a point after the selected one (same temperature, time at midpoint toward
     the next point), then select it;
   - `-P` — delete the selected point (disabled below 2 points);
@@ -555,7 +557,9 @@ si parte con 2 punti e li si aggiungono/eliminano a seconda delle necessità.
 - Barra comandi (solo ASCII — il font 6x8 non ha frecce Unicode):
   - `<` / `>` — seleziona il punto precedente/successivo;
   - `T` — modifica la **temperatura** (pomello ±5 °C per detent, short press per confermare);
-  - `t` — modifica il **tempo** (pomello ±5 min per detent, short press per confermare);
+  - `t` — durata del segmento dal punto precedente (pomello ±5 min; il tempo cumulativo
+    del punto cambia di conseguenza, short press per confermare);
+  - `t Tot.` — tempo cumulativo dall'inizio al punto selezionato (sola lettura);
   - `+P` — aggiunge un punto dopo quello selezionato (stessa temperatura, tempo a metà
     verso il punto successivo), poi lo seleziona;
   - `-P` — elimina il punto selezionato (disattivo sotto i 2 punti);

@@ -348,8 +348,10 @@ def editor(sc):
     # value row
     sc.rrect(4, 82, 232, 16, 4, C["surface"])
     sc.text(10, 86, "P2", C["muted"], 1)
-    sc.text(34, 86, "T 950C", C["text"], 1)
-    sc.text(104, 86, "t 2h", C["text"], 1)
+    sc.text(30, 86, "T 950C", C["text"], 1)
+    sc.text(82, 86, "t 1h", C["text"], 1)
+    sc.text(140, 86, "t Tot. ", C["muted"], 1)
+    sc.text(140 + sc.text_width("t Tot. ", 1), 86, "2h", C["text"], 1)
 
     # buttons
     labels = ["<", "T", "t", ">", "+P", "-P"]

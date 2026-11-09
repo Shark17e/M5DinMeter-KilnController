@@ -438,7 +438,12 @@ void drawAddProgName() {
 void drawAddProgEdit() {
   auto& d = DinMeter.Display;
   d.fillScreen(COL_BG);
-  uiTopBar(editIndex >= 0 ? "MODIFICA" : "NUOVO");
+  char title[24];
+  if (fieldEditMode)
+    snprintf(title, sizeof(title), "%s  RUOTA", editIndex >= 0 ? "MODIFICA" : "NUOVO");
+  else
+    snprintf(title, sizeof(title), "%s", editIndex >= 0 ? "MODIFICA" : "NUOVO");
+  uiTopBar(title);
 
   // Grafico in una card
   d.fillRoundRect(4, 18, 232, 62, 6, COL_SURFACE);
@@ -486,23 +491,26 @@ void drawAddProgEdit() {
 
   // Riga valore del punto selezionato
   Point &p = newProgram.points[editingPointIndex];
-  String tLabel = shortTimeLabel(p.cumSec);
+  uint32_t prevCum = (editingPointIndex == 0) ? 0 : newProgram.points[editingPointIndex - 1].cumSec;
+  uint32_t segSec = (p.cumSec > prevCum) ? (p.cumSec - prevCum) : 0;
+  String tSeg = shortTimeLabel(segSec);
+  String tTot = shortTimeLabel(p.cumSec);
   d.fillRoundRect(4, 82, 232, 16, 4, COL_SURFACE);
   d.setTextSize(1);
   d.setCursor(10, 86);
   d.setTextColor(COL_MUTED);
   d.printf("P%d", editingPointIndex + 1);
-  d.setCursor(34, 86);
+  d.setCursor(30, 86);
   d.setTextColor((fieldEditMode && editingTempField) ? COL_AMBER : COL_TEXT);
   d.printf("T %.0fC", p.temp);
-  d.setCursor(104, 86);
+  d.setCursor(82, 86);
   d.setTextColor((fieldEditMode && !editingTempField) ? COL_CYAN : COL_TEXT);
-  d.printf("t %s", tLabel.c_str());
-  if (fieldEditMode) {
-    d.setTextColor(COL_MUTED);
-    d.setCursor(190, 86);
-    d.print("RUOTA");
-  }
+  d.printf("t %s", tSeg.c_str());
+  d.setCursor(140, 86);
+  d.setTextColor(COL_MUTED);
+  d.print("t Tot. ");
+  d.setTextColor(COL_TEXT);
+  d.print(tTot);
 
   // Barra comandi
   const char* labels1[6] = {"<", "T", "t", ">", "+P", "-P"};
