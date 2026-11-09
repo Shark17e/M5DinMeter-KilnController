@@ -8,9 +8,22 @@ version with the same structure.
 Questo file è bilingue: prima la documentazione completa in inglese, poi la versione italiana
 con identica struttura.
 
+- [Screenshots / Schermate](#screenshots--schermate)
 - [English documentation](#english-documentation)
 - [Documentazione italiana](#documentazione-italiana)
 - [License / Licenza](#license--licenza)
+
+## Screenshots / Schermate
+
+*Example data; rendered from the firmware drawing code with the M5GFX Font0 font (240×135, scaled 3×).*
+*Dati di esempio; render generato dal codice di disegno del firmware con il font M5GFX Font0 (240×135, scalato 3×).*
+
+| | |
+|---|---|
+| <img src="docs/images/main_menu.png" width="320"><br>**Main menu** · Menu principale | <img src="docs/images/program_actions.png" width="320"><br>**Program actions** · Azioni programma |
+| <img src="docs/images/running.png" width="320"><br>**RUNNING** · Cottura in corso | <img src="docs/images/editor.png" width="320"><br>**Curve editor** · Editor curva |
+| <img src="docs/images/manual.png" width="320"><br>**Manual SSR** · Manuale | <img src="docs/images/slow_rise.png" width="320"><br>**Slow-rise alert** · Salita lenta |
+| <img src="docs/images/rename.png" width="320"><br>**Rename** · Rinomina | |
 
 ---
 
@@ -33,6 +46,9 @@ auto-tune test is ever needed.
 - **Temperature curves**: 2..20 break-point points (`cumSec, temp`), edited with a built-in
   **graphical editor** — no step wizard, no intermediate steps: the slope between points is
   implicit (ramps) and a hold is simply two points at the same temperature.
+- **Program management**: short press on a program opens an action popup with
+  `Avvia`, `Modifica curva`, `Rinomina`, `Cancella programma`, `Annulla`; existing curves are
+  edited and saved in place, and the long press remains free for future actions.
 - **PID controller** with:
   - fixed 1 s cycle time, derivative computed on the *measured* temperature (no kick);
   - anti-windup (integrates only when the output is not saturated and |error| > 0.2 °C),
@@ -42,7 +58,7 @@ auto-tune test is ever needed.
     and ramps (no relay/step-relay auto-tune).
 - **Time-proportional SSR driving** on a fixed 10 s window — full DC blocks, safe for
   zero-cross SSRs, no fast PWM (see Hardware).
-- **Real-time RUNNING screen**: programmed curve (yellow), measured temperature (green),
+- **Real-time RUNNING screen**: programmed curve (amber), measured temperature (green),
   live position marker, automatic X-axis tick steps, SSR duty %, battery %.
 - **Complete safety layer**: absolute temperature stop at 1250 °C, hardware watchdog,
   slow-ramp watchdog, fail-safe SSR OFF on sensor error.
@@ -85,7 +101,8 @@ Recommended practice:
 - I2C address **0x66**, bus 400 kHz, `Wire.begin(13, 15, 400000L)` **after** `M5.begin()`.
 - Register `0x00`: temperature, int32 big-endian, in **hundredths of °C** (raw 52345 = 523.45 °C).
 - Register `0x20`: status; **0 = valid**.
-- Boot probe: 5 attempts, then the firmware blocks (`while(true)`) if the module is absent.
+- Boot probe: 5 attempts; if the module is absent the firmware continues in fail-safe mode
+  (`sensorError`, SSR forced OFF).
 
 ### 3.4 Known issue with the KMeterISO library (I2C repeated-start bug)
 
@@ -121,24 +138,31 @@ Input is only the **rotary encoder** (rotate, short press, long press 1 s).
 
 ### 4.1 Main menu
 
-- Program list, 24 px rows, ~4 visible, centered on the selection (blue highlight);
-  encoder scrolls.
-- Red battery % (size 2) at the top-left.
-- Measured temperature **large (size 4)** on the right, vertically centered; updated every
-  400 ms with partial redraw.
-- Last entries: `Aggiungi Programma` (new program) and `Spegni` (power off).
-- **Long press on a program** → delete confirmation screen (short = confirm, long = cancel).
+- Status bar with battery icon/percentage and the `M5 KILN` label.
+- Hero section with the measured temperature (large) and a `SENSORE OK/ERRORE` pill.
+- Program list as rounded cards, 17 px rows, ~4 visible, centered on the selection
+  (cyan accent bar); the encoder scrolls.
+- Entries after the programs: `Manuale`, `Aggiungi Programma`, `Spegni`.
+- **Short press on a program** → action popup with `Avvia`, `Modifica curva`, `Rinomina`,
+  `Cancella programma`, `Annulla`; the encoder selects, short press confirms.
+- **Long press is free** (reserved for future actions).
+- Delete requires the confirmation screen (`SHORT` = confirm, `LONG` = cancel).
 
 ### 4.2 New program — name
 
 - Alphabet `A-Z 0-9 - _` + space, max 20 characters.
 - Encoder scrolls the current character; short press appends it; long press confirms the name.
+- The same screen is used by `Rinomina`: it shows the current name and the new one; an empty
+  name cancels the operation.
 
 ### 4.3 Curve editor (graphical)
 
 After the name you land directly in the editor — there is **no "how many points" question**:
 you start with 2 points and add/remove them as needed.
 
+- The editor is opened by `Aggiungi Programma` (new curve, title `NUOVO`) or by
+  `Modifica curva` on an existing program (title `MODIFICA`); `Salva` updates the existing
+  program in place.
 - Graph preview on top: current curve, grey **P0** (fixed, not editable) = the temperature
   measured when the firing starts.
 - Command bar (ASCII only — the 6x8 font has no Unicode arrows):
@@ -148,39 +172,27 @@ you start with 2 points and add/remove them as needed.
   - `+P` — add a point after the selected one (same temperature, time at midpoint toward
     the next point), then select it;
   - `-P` — delete the selected point (disabled below 2 points);
-  - `Salva` — save; `Annulla` — discard (long press anywhere also cancels).
+  - `Salva` — save; `Annulla` — discard.
 - Constraints: temperature 0..1200 °C; times strictly increasing (min +5 min between
   consecutive points); total program duration ≤ 24 h; 2..20 points.
 - The editor **is** the review: what you see is exactly what will be executed.
 
 ### 4.4 RUNNING screen
 
-Layout (all texts size 1, per specification):
-
-```
-| Name RAMPA 2/5        SSR:ON 65%   78% |   R1: name + segment | SSR duty | battery (red)
-| Tgt 950.0C  TSens 523.4C   1h23m/4h00m |   R2: target (yellow) + measured (green) | time
-| 1200┤                                  |   graph 210x98
-|     │  (yellow curve, green history,   |   Y labels 0/300/600/900/1200
-|     │   white position dot)            |
-|    0└──────── 1h    2h    3h          |   X labels, automatic step (min 45 px)
-```
-
-- **R1**: program name + `RAMPA/TENUTA n/n` (segment type and index), `SSR:ON/OFF + duty %`,
-  red battery percentage (red so it can't be confused with the SSR %).
-- **R2**: `Tgt 950.0C` in yellow, `TSens 523.4C` in green (TSens = the value read by the
-  thermocouple), elapsed/total time on the right.
-- **Graph**: programmed curve (yellow polyline), measured temperature history (green),
-  white dot marking the current position on the curve, Y-axis temperature labels,
-  X-axis time labels with automatic "nice" step (1m/5m/10m/15m/30m/1h/2h/4h/6h/12h/24h,
-  minimum 45 px between labels, format `2h30m`).
-- **Sensor error** → R2 turns red `SENSORE ERRORE!`, SSR forced OFF.
-- **Firing complete** → `FINE 4h00m SSR 2h10m` (total duration + SSR on-time).
+- **Top bar**: program name (truncated to 28 characters) and battery icon/percentage.
+- **Second line**: `Tgt` in amber, `Tsens` in green, elapsed/total time on the right.
+- **Graph card**: header with `RAMPA/TENUTA n/n` and the `SSR ON/OFF duty%` pill, grid,
+  programmed curve (amber), measured history (green), white position dot, Y labels
+  0/300/600/900/1200 and automatic X labels (1m/5m/10m/15m/30m/1h/2h/4h/6h/12h/24h, minimum
+  45 px).
+- **Sensor error** → red banner `SENSORE ERRORE! SSR OFF`.
+- **Firing complete** → `COTTURA COMPLETATA`, total duration and SSR on-time.
 
 ### 4.5 Special states
 
-- **SLOW_RISE** (slow ramp detected, see Safety): 3 choices via encoder + short press —
-  `Attendi arrivo` / `Allunga 30 min` / `Annulla`.
+- **SLOW_RISE** (slow ramp detected, see Safety): 3 choices — `Aspetta che recuperi` /
+  `Allunga di 30 min` / `Annulla cottura`; a short hint under the menu explains the
+  selected choice.
 - **SOVRATEMP** (over-temperature, see Safety): red full screen; exit only with long press.
 
 ## 5. PID & self-correction
@@ -281,11 +293,11 @@ The integrator is reset at program start and at each curve-segment change.
 4. **Slow-ramp watchdog** ("salita lenta"): if the temperature stays **> 15 °C below the
    curve** for **60 minutes**, the controller can no longer assume normal behavior and
    opens a 3-choice screen:
-   - `Attendi arrivo` — freeze the setpoint at the current curve value, wait until the
+   - `Aspetta che recuperi` — freeze the setpoint at the current curve value, wait until the
      temperature arrives (±2 °C), with a 1 h cap: after that the choice is asked again;
-   - `Allunga 30 min` — insert a flat 30 min point at the current position and shift the
+   - `Allunga di 30 min` — insert a flat 30 min point at the current position and shift the
      rest of the curve accordingly (`SLOW_RISE_EXTEND_S = 1800`);
-   - `Annulla` — abort the firing.
+   - `Annulla cottura` — abort the firing.
 5. **Fail-safe principle**: never heat on a stale/frozen temperature reading.
 
 ## 7. Data model & persistence
@@ -339,7 +351,7 @@ arduino-cli compile --fqbn m5stack:esp32:m5stack_dinmeter M5StackDin_KilnControl
 arduino-cli upload -p COM7 --fqbn m5stack:esp32:m5stack_dinmeter M5StackDin_KilnController
 ```
 
-Tested build: ~555 KB flash (~42 % of 1.3 MB), ~54 KB RAM (~16 %).
+Tested build: ~586 KB flash (44 % of 1.3 MB), ~54 KB RAM (16 %).
 
 ## 9. Dependencies
 
@@ -351,10 +363,12 @@ Tested build: ~555 KB flash (~42 % of 1.3 MB), ~54 KB RAM (~16 %).
 
 ```
 M5StackDin_KilnController.ino   setup, main loop, FSM, encoder, button, I2C helpers
-kiln_ui.ino                     main menu, curve editor, delete confirmation
-kiln_run.ino                    RUNNING screen (header + graph + axis labels)
+kiln_theme.ino                  colour palette, status bar, cards, buttons, text helpers
+kiln_ui.ino                     main menu, action popup, curve editor, rename, delete
+kiln_run.ino                    RUNNING screen (header + graph) and MANUAL screen
 kiln_programs.ino               curve execution, NVS persistence, migration
 kiln_pid.ino                    PID, SSR actuation, observers, self-correction
+tools/render_ui.py              reproducible UI screenshots (docs/images)
 docs/                           00_flusso_di_lavoro.md … 07_sicurezza.md
 ```
 
@@ -386,6 +400,9 @@ senza mai richiedere test a vuoto del forno.
 - **Curve di temperatura**: 2..20 punti di svolta (`cumSec, temp`), editati con un
   **editor grafico** integrato — niente wizard a step: la pendenza tra i punti è implicita
   (rampe) e una tenuta è semplicemente due punti alla stessa temperatura.
+- **Gestione programmi**: short press su un programma apre un popup con
+  `Avvia`, `Modifica curva`, `Rinomina`, `Cancella programma`, `Annulla`; le curve esistenti
+  si modificano e si salvano sul posto, e il long press resta libero per azioni future.
 - **PID** con:
   - ciclo fisso di 1 s, derivata sulla temperatura *misurata* (niente kick);
   - anti-windup (integra solo se l'uscita non è satura e |errore| > 0.2 °C), clamp
@@ -395,7 +412,7 @@ senza mai richiedere test a vuoto del forno.
     su tenute e rampe (niente autotune a relè).
 - **Attuazione SSR time-proportional** su finestra fissa di 10 s — blocchi DC pieni,
   sicuri per SSR a zero-cross, niente PWM veloce (vedi Hardware).
-- **Schermata RUNNING real-time**: curva programmata (gialla), temperatura misurata
+- **Schermata RUNNING real-time**: curva programmata (ambra), temperatura misurata
   (verde), pallino di posizione, etichette X a passo automatico, duty % SSR, % batteria.
 - **Sicurezza completa**: stop assoluto a 1250 °C, watchdog hardware, watchdog salita
   lenta, fail-safe SSR OFF su errore sensore.
@@ -439,7 +456,8 @@ Consigli pratici:
 - Indirizzo I2C **0x66**, bus 400 kHz, `Wire.begin(13, 15, 400000L)` **dopo** `M5.begin()`.
 - Registro `0x00`: temperatura, int32 big-endian, in **centesimi di °C** (raw 52345 = 523.45 °C).
 - Registro `0x20`: stato; **0 = valido**.
-- Probe al boot: 5 tentativi, poi blocco (`while(true)`) se il modulo è assente.
+- Probe al boot: 5 tentativi; se il modulo è assente il firmware prosegue in fail-safe
+  (`sensorError`, SSR forzato OFF).
 
 ### 3.4 Bug noto della libreria KMeterISO (repeated-start I2C)
 
@@ -474,25 +492,31 @@ Ingresso solo con **pomello rotativo** (ruota, short press, long press 1 s).
 
 ### 4.1 Menu principale
 
-- Lista programmi, righe da 24 px, ~4 visibili, centrata sulla selezione (evidenza blu);
-  il pomello scorre.
-- % batteria rossa (size 2) in alto a sinistra.
-- Temperatura misurata **grande (size 4)** a destra, centrata verticalmente; aggiornata
-  ogni 400 ms con ridisegno parziale.
-- Ultime voci: `Aggiungi Programma` (nuovo programma) e `Spegni` (power off).
-- **Long press su un programma** → schermata di conferma cancellazione (short = conferma,
-  long = annulla).
+- Status bar con icona/% batteria ed etichetta `M5 KILN`.
+- Hero con temperatura misurata (grande) e pillola `SENSORE OK/ERRORE`.
+- Lista programmi a card arrotondate, righe da 17 px, ~4 visibili, centrata sulla selezione
+  (barra cyan); il pomello scorre.
+- Voci dopo i programmi: `Manuale`, `Aggiungi Programma`, `Spegni`.
+- **Short press su un programma** → popup azioni con `Avvia`, `Modifica curva`, `Rinomina`,
+  `Cancella programma`, `Annulla`; il pomello seleziona, short conferma.
+- **Long press libero** (riservato a future azioni).
+- La cancellazione richiede la conferma (`SHORT` = conferma, `LONG` = annulla).
 
 ### 4.2 Nuovo programma — nome
 
 - Alfabeto `A-Z 0-9 - _` + spazio, massimo 20 caratteri.
 - Il pomello scorre il carattere corrente; short press lo aggiunge; long press conferma il nome.
+- La stessa schermata è usata da `Rinomina`: mostra il nome attuale e il nuovo; un nome vuoto
+  annulla l'operazione.
 
 ### 4.3 Editor curva (grafico)
 
 Dopo il nome si entra direttamente nell'editor — **niente domanda "quanti punti"**:
 si parte con 2 punti e li si aggiungono/eliminano a seconda delle necessità.
 
+- L'editor si apre da `Aggiungi Programma` (curva nuova, titolo `NUOVO`) oppure da
+  `Modifica curva` su un programma esistente (titolo `MODIFICA`); `Salva` aggiorna il
+  programma esistente sul posto.
 - Anteprima grafica in alto: curva corrente, **P0** grigio fisso (non editabile) = la
   temperatura misurata all'avvio della cottura.
 - Barra comandi (solo ASCII — il font 6x8 non ha frecce Unicode):
@@ -502,39 +526,26 @@ si parte con 2 punti e li si aggiungono/eliminano a seconda delle necessità.
   - `+P` — aggiunge un punto dopo quello selezionato (stessa temperatura, tempo a metà
     verso il punto successivo), poi lo seleziona;
   - `-P` — elimina il punto selezionato (disattivo sotto i 2 punti);
-  - `Salva` — salva; `Annulla` — scarta (long press ovunque annulla).
+  - `Salva` — salva; `Annulla` — scarta.
 - Vincoli: temperatura 0..1200 °C; tempi strettamente crescenti (min +5 min tra punti
   consecutivi); durata totale ≤ 24 h; 2..20 punti.
 - L'editor **è** la review: quello che vedi è quello che verrà eseguito.
 
 ### 4.4 Schermata RUNNING
 
-Layout (tutti i testi size 1, da specifica):
-
-```
-| Nome RAMPA 2/5         SSR:ON 65%   78% |   R1: nome + segmento | duty SSR | batteria (rossa)
-| Tgt 950.0C  TSens 523.4C    1h23m/4h00m |   R2: target (giallo) + misurata (verde) | tempo
-| 1200┤                                   |   grafico 210x98
-|     │  (curva gialla, storia verde,     |   etichette Y 0/300/600/900/1200
-|     │   pallino posizione bianco)       |
-|    0└──────── 1h    2h    3h           |   etichette X, passo automatico (min 45 px)
-```
-
-- **R1**: nome programma + `RAMPA/TENUTA n/n` (tipo di segmento e indice), `SSR:ON/OFF +
-  duty %`, % batteria rossa (rossa per non confonderla con la % SSR).
-- **R2**: `Tgt 950.0C` in giallo, `TSens 523.4C` in verde (TSens = valore letto dalla
-  termocoppia), tempo trascorso/totale a destra.
-- **Grafico**: curva programmata (gialla), storia temperatura misurata (verde), pallino
-  bianco di posizione sulla curva, etichette Y della temperatura, etichette X a passo
-  "carino" automatico (1m/5m/10m/15m/30m/1h/2h/4h/6h/12h/24h, minimo 45 px tra le
-  etichette, formato `2h30m`).
-- **Errore sensore** → R2 rossa `SENSORE ERRORE!`, SSR forzato OFF.
-- **Cottura terminata** → `FINE 4h00m SSR 2h10m` (durata totale + on-time SSR).
+- **Barra superiore**: nome programma (troncato a 28 caratteri) e icona/% batteria.
+- **Seconda riga**: `Tgt` in ambra, `Tsens` in verde, tempo trascorso/totale a destra.
+- **Card grafico**: intestazione con `RAMPA/TENUTA n/n` e pillola `SSR ON/OFF duty%`, griglia,
+  curva programmata (ambra), storia misurata (verde), pallino di posizione bianco, etichette Y
+  0/300/600/900/1200 ed etichette X automatiche (1m/5m/10m/15m/30m/1h/2h/4h/6h/12h/24h,
+  minimo 45 px).
+- **Errore sensore** → banner rosso `SENSORE ERRORE! SSR OFF`.
+- **Cottura terminata** → `COTTURA COMPLETATA`, durata totale e on-time SSR.
 
 ### 4.5 Stati speciali
 
-- **SLOW_RISE** (salita lenta rilevata, vedi Sicurezza): 3 scelte con pomello + short
-  press — `Attendi arrivo` / `Allunga 30 min` / `Annulla`.
+- **SLOW_RISE** (salita lenta rilevata, vedi Sicurezza): 3 scelte — `Aspetta che recuperi` /
+  `Allunga di 30 min` / `Annulla cottura`; una riga sotto il menu spiega la scelta selezionata.
 - **SOVRATEMP** (sovratemperatura, vedi Sicurezza): schermata rossa piena; uscita solo con
   long press.
 
@@ -636,12 +647,12 @@ codice. Integrale azzerato ad avvio programma e a ogni cambio segmento curva.
 4. **Watchdog salita lenta**: se la temperatura resta **> 15 °C sotto la curva** per
    **60 minuti**, il controllore non può più assumere un comportamento normale e apre la
    schermata a 3 scelte:
-   - `Attendi arrivo` — congela il setpoint al valore corrente della curva, attende
+   - `Aspetta che recuperi` — congela il setpoint al valore corrente della curva, attende
      l'arrivo della temperatura (±2 °C), con tetto di 1 h: dopo, la scelta viene
      riproposta;
-   - `Allunga 30 min` — inserisce un punto piatto da 30 min alla posizione attuale e
+   - `Allunga di 30 min` — inserisce un punto piatto da 30 min alla posizione attuale e
      slitta il resto della curva (`SLOW_RISE_EXTEND_S = 1800`);
-   - `Annulla` — annulla la cottura.
+   - `Annulla cottura` — annulla la cottura.
 5. **Principio fail-safe**: mai scaldare con una lettura di temperatura stantia/congelata.
 
 ## 7. Modello dati e persistenza
@@ -695,7 +706,7 @@ arduino-cli compile --fqbn m5stack:esp32:m5stack_dinmeter M5StackDin_KilnControl
 arduino-cli upload -p COM7 --fqbn m5stack:esp32:m5stack_dinmeter M5StackDin_KilnController
 ```
 
-Build testata: ~555 KB di flash (~42 % di 1.3 MB), ~54 KB di RAM (~16 %).
+Build testata: ~586 KB di flash (44 % di 1.3 MB), ~54 KB di RAM (16 %).
 
 ## 9. Dipendenze
 
@@ -707,10 +718,12 @@ Build testata: ~555 KB di flash (~42 % di 1.3 MB), ~54 KB di RAM (~16 %).
 
 ```
 M5StackDin_KilnController.ino   setup, loop principale, FSM, encoder, pulsante, helper I2C
-kiln_ui.ino                     menu principale, editor curva, conferma cancellazione
-kiln_run.ino                    schermata RUNNING (testata + grafico + etichette assi)
+kiln_theme.ino                  palette colori, status bar, card, pulsanti, helper testo
+kiln_ui.ino                     menu principale, popup azioni, editor curva, rinomina, delete
+kiln_run.ino                    schermata RUNNING (testata + grafico) e schermata MANUALE
 kiln_programs.ino               esecuzione curva, persistenza NVS, migrazione
 kiln_pid.ino                    PID, attuazione SSR, osservatori, auto-correzione
+tools/render_ui.py              screenshot UI riproducibili (docs/images)
 docs/                           00_flusso_di_lavoro.md … 07_sicurezza.md
 ```
 
