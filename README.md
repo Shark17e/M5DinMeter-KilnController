@@ -8,8 +8,11 @@ version with the same structure.
 Questo file è bilingue: prima la documentazione completa in inglese, poi la versione italiana
 con identica struttura.
 
+**Manuale utente (PDF, italiano):** [M5DinMeter Kiln Controller — Manuale utente](docs/M5DinMeter-KilnController-Manuale-Utente.pdf)
+
 - [English documentation](#english-documentation)
 - [Documentazione italiana](#documentazione-italiana)
+- [Manuale utente (PDF)](docs/M5DinMeter-KilnController-Manuale-Utente.pdf)
 - [License / Licenza](#license--licenza)
 
 ---
@@ -402,6 +405,8 @@ The `docs/` folder holds the full design docs (in Italian):
 `03` PID & self-correction, `04` persistence & migration, `05` UI specifications,
 `06` curve editor, `07` safety.
 
+- **User manual (PDF, Italian)**: [Manuale utente](docs/M5DinMeter-KilnController-Manuale-Utente.pdf)
+
 ---
 
 # Documentazione italiana
@@ -792,6 +797,8 @@ La cartella `docs/` contiene la documentazione di progetto completa (in italiano
 `00` flusso di lavoro, `01` hardware e note SSR, `02` lettura temperatura e il bug I2C,
 `03` PID e auto-correzione, `04` persistenza e migrazione, `05` specifiche UI,
 `06` editor curva, `07` sicurezza.
+
+- **Manuale utente (PDF)**: [Manuale utente](docs/M5DinMeter-KilnController-Manuale-Utente.pdf)
 
 ---
 
