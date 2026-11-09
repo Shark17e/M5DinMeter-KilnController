@@ -150,7 +150,7 @@ class Screen:
 # ---------------------------------------------------------------------------
 # Main menu + action popup
 # ---------------------------------------------------------------------------
-PROGRAMS = ["Biscotto", "Default", "Prova"]
+PROGRAMS = ["Prova", "Default", "Vecchio"]
 SELECTED = 1
 TEMP = 23
 BATTERY = 78
@@ -315,7 +315,7 @@ def editor(sc):
     sc.rrect(4, 18, 232, 62, 6, C["surface"])
     gx, gy, gw, gh = 30, 22, 204, 52
     total = 14400
-    points = [(1800, 300), (3600, 600), (7200, 950), (10800, 950), (14400, 500)]
+    points = [(3600, 500), (7200, 950), (10800, 950), (14400, 500)]
     selected = 1
     start_temp = 23
 
@@ -348,14 +348,14 @@ def editor(sc):
     # value row
     sc.rrect(4, 82, 232, 16, 4, C["surface"])
     sc.text(10, 86, "P2", C["muted"], 1)
-    sc.text(34, 86, "T 600C", C["text"], 1)
-    sc.text(104, 86, "t 1h", C["text"], 1)
+    sc.text(34, 86, "T 950C", C["text"], 1)
+    sc.text(104, 86, "t 2h", C["text"], 1)
 
     # buttons
     labels = ["<", "T", "t", ">", "+P", "-P"]
     for i, label in enumerate(labels):
         x = 2 + i * 39
-        sel = i == 2
+        sel = i == 1
         sc.rrect(x, 100, 38, 16, 4, C["cyan"] if sel else C["surface"], None if sel else C["line"])
         tw = sc.text_width(label, 1)
         sc.text(x + (38 - tw) // 2, 104, label, C["bg"] if sel else C["text"], 1)

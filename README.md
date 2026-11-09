@@ -8,22 +8,9 @@ version with the same structure.
 Questo file è bilingue: prima la documentazione completa in inglese, poi la versione italiana
 con identica struttura.
 
-- [Screenshots / Schermate](#screenshots--schermate)
 - [English documentation](#english-documentation)
 - [Documentazione italiana](#documentazione-italiana)
 - [License / Licenza](#license--licenza)
-
-## Screenshots / Schermate
-
-*Example data; rendered from the firmware drawing code with the M5GFX Font0 font (240×135, scaled 3×).*
-*Dati di esempio; render generato dal codice di disegno del firmware con il font M5GFX Font0 (240×135, scalato 3×).*
-
-| | |
-|---|---|
-| <img src="docs/images/main_menu.png" width="320"><br>**Main menu** · Menu principale | <img src="docs/images/program_actions.png" width="320"><br>**Program actions** · Azioni programma |
-| <img src="docs/images/running.png" width="320"><br>**RUNNING** · Cottura in corso | <img src="docs/images/editor.png" width="320"><br>**Curve editor** · Editor curva |
-| <img src="docs/images/manual.png" width="320"><br>**Manual SSR** · Manuale | <img src="docs/images/slow_rise.png" width="320"><br>**Slow-rise alert** · Salita lenta |
-| <img src="docs/images/rename.png" width="320"><br>**Rename** · Rinomina | |
 
 ---
 
@@ -136,6 +123,9 @@ handling of failed reads — so corrupted values were used directly.
 
 Input is only the **rotary encoder** (rotate, short press, long press 1 s).
 
+Main program workflow: select a program → short press → `Avvia` / `Modifica curva` /
+`Rinomina` / `Cancella programma` / `Annulla`.
+
 ### 4.1 Main menu
 
 - Status bar with battery icon/percentage and the `M5 KILN` label.
@@ -148,12 +138,21 @@ Input is only the **rotary encoder** (rotate, short press, long press 1 s).
 - **Long press is free** (reserved for future actions).
 - Delete requires the confirmation screen (`SHORT` = confirm, `LONG` = cancel).
 
+| Main menu | Action popup |
+|---|---|
+| <img src="docs/images/main_menu.png" width="320"> | <img src="docs/images/program_actions.png" width="320"> |
+| Select a program: the cyan bar marks the current row. | Short press opens `Avvia` / `Modifica curva` / `Rinomina` / `Cancella programma` / `Annulla`. |
+
 ### 4.2 New program — name
 
 - Alphabet `A-Z 0-9 - _` + space, max 20 characters.
 - Encoder scrolls the current character; short press appends it; long press confirms the name.
 - The same screen is used by `Rinomina`: it shows the current name and the new one; an empty
   name cancels the operation.
+
+<img src="docs/images/rename.png" width="480">
+
+*Rename: the current name is shown above, the new name is typed with the encoder; long press confirms.*
 
 ### 4.3 Curve editor (graphical)
 
@@ -177,6 +176,10 @@ you start with 2 points and add/remove them as needed.
   consecutive points); total program duration ≤ 24 h; 2..20 points.
 - The editor **is** the review: what you see is exactly what will be executed.
 
+<img src="docs/images/editor.png" width="480">
+
+*Curve editor: graph with grid, selected point in amber, value row and command bar.*
+
 ### 4.4 RUNNING screen
 
 - **Top bar**: program name (truncated to 28 characters) and battery icon/percentage.
@@ -188,12 +191,30 @@ you start with 2 points and add/remove them as needed.
 - **Sensor error** → red banner `SENSORE ERRORE! SSR OFF`.
 - **Firing complete** → `COTTURA COMPLETATA`, total duration and SSR on-time.
 
+<img src="docs/images/running.png" width="480">
+
+*RUNNING: program name and battery, target/measured temperature, time, graph with grid and SSR duty.*
+
 ### 4.5 Special states
 
 - **SLOW_RISE** (slow ramp detected, see Safety): 3 choices — `Aspetta che recuperi` /
   `Allunga di 30 min` / `Annulla cottura`; a short hint under the menu explains the
   selected choice.
 - **SOVRATEMP** (over-temperature, see Safety): red full screen; exit only with long press.
+
+<img src="docs/images/slow_rise.png" width="480">
+
+*SLOW_RISE: what happened, the three choices and the hint for the selected one.*
+
+### 4.6 Manual mode
+
+Select `Manuale` in the main menu and short press: the SSR is controlled manually. Short
+press exits (SSR OFF), long press toggles the SSR; the toggle is blocked while the sensor is
+in error.
+
+<img src="docs/images/manual.png" width="480">
+
+*Manual mode: large SSR state and measured temperature.*
 
 ## 5. PID & self-correction
 
@@ -490,6 +511,9 @@ nessuna gestione delle letture fallite — quindi valori corrotti usati direttam
 
 Ingresso solo con **pomello rotativo** (ruota, short press, long press 1 s).
 
+Flusso principale: seleziona un programma → short press → `Avvia` / `Modifica curva` /
+`Rinomina` / `Cancella programma` / `Annulla`.
+
 ### 4.1 Menu principale
 
 - Status bar con icona/% batteria ed etichetta `M5 KILN`.
@@ -502,12 +526,21 @@ Ingresso solo con **pomello rotativo** (ruota, short press, long press 1 s).
 - **Long press libero** (riservato a future azioni).
 - La cancellazione richiede la conferma (`SHORT` = conferma, `LONG` = annulla).
 
+| Menu principale | Popup azioni |
+|---|---|
+| <img src="docs/images/main_menu.png" width="320"> | <img src="docs/images/program_actions.png" width="320"> |
+| Seleziona un programma: la barra cyan indica la riga corrente. | Short press apre `Avvia` / `Modifica curva` / `Rinomina` / `Cancella programma` / `Annulla`. |
+
 ### 4.2 Nuovo programma — nome
 
 - Alfabeto `A-Z 0-9 - _` + spazio, massimo 20 caratteri.
 - Il pomello scorre il carattere corrente; short press lo aggiunge; long press conferma il nome.
 - La stessa schermata è usata da `Rinomina`: mostra il nome attuale e il nuovo; un nome vuoto
   annulla l'operazione.
+
+<img src="docs/images/rename.png" width="480">
+
+*Rinomina: il nome attuale è in alto, il nuovo si digita col pomello; long press conferma.*
 
 ### 4.3 Editor curva (grafico)
 
@@ -531,6 +564,10 @@ si parte con 2 punti e li si aggiungono/eliminano a seconda delle necessità.
   consecutivi); durata totale ≤ 24 h; 2..20 punti.
 - L'editor **è** la review: quello che vedi è quello che verrà eseguito.
 
+<img src="docs/images/editor.png" width="480">
+
+*Editor curva: grafico con griglia, punto selezionato in ambra, riga valori e barra comandi.*
+
 ### 4.4 Schermata RUNNING
 
 - **Barra superiore**: nome programma (troncato a 28 caratteri) e icona/% batteria.
@@ -542,12 +579,30 @@ si parte con 2 punti e li si aggiungono/eliminano a seconda delle necessità.
 - **Errore sensore** → banner rosso `SENSORE ERRORE! SSR OFF`.
 - **Cottura terminata** → `COTTURA COMPLETATA`, durata totale e on-time SSR.
 
+<img src="docs/images/running.png" width="480">
+
+*RUNNING: nome programma e batteria, target/misurata, tempo, grafico con griglia e duty SSR.*
+
 ### 4.5 Stati speciali
 
 - **SLOW_RISE** (salita lenta rilevata, vedi Sicurezza): 3 scelte — `Aspetta che recuperi` /
   `Allunga di 30 min` / `Annulla cottura`; una riga sotto il menu spiega la scelta selezionata.
 - **SOVRATEMP** (sovratemperatura, vedi Sicurezza): schermata rossa piena; uscita solo con
   long press.
+
+<img src="docs/images/slow_rise.png" width="480">
+
+*SALITA LENTA: cosa è successo, le tre scelte e la spiegazione della voce selezionata.*
+
+### 4.6 Modalità manuale
+
+Seleziona `Manuale` nel menu principale e short press: l'SSR è controllato a mano. Short
+press esce (SSR OFF), long press accende/spegne l'SSR; il toggle è bloccato con sensore in
+errore.
+
+<img src="docs/images/manual.png" width="480">
+
+*Modalità manuale: stato SSR grande e temperatura misurata.*
 
 ## 5. PID e auto-correzione
 
