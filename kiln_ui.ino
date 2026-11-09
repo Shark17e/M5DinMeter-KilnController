@@ -3,18 +3,59 @@
 // ------------------------------------------------
 
 // ------------------------------------------------
+// BATTERIA: lettura calibrata + EMA + curva LiPo (campo 09)
+// ------------------------------------------------
+// Curva di scarica LiPo approssimata a tratti (mV -> %)
+int batteryPctFromMv(float mv) {
+  static const float PTS[][2] = {
+    {4200, 100}, {4150, 95}, {4100, 90}, {4050, 85}, {4000, 80}, {3950, 72},
+    {3900, 65},  {3850, 58}, {3800, 50}, {3750, 38}, {3700, 25}, {3650, 15},
+    {3600, 8},   {3500, 3},  {3400, 1},  {3200, 0}
+  };
+  static const int N = sizeof(PTS) / sizeof(PTS[0]);
+  if (mv >= PTS[0][0]) return 100;
+  if (mv <= PTS[N - 1][0]) return 0;
+  for (int i = 0; i < N - 1; i++) {
+    if (mv <= PTS[i][0] && mv >= PTS[i + 1][0]) {
+      float f = (mv - PTS[i][0]) / (PTS[i + 1][0] - PTS[i][0]);
+      return (int)(PTS[i][1] + f * (PTS[i + 1][1] - PTS[i][1]) + 0.5f);
+    }
+  }
+  return 0;
+}
+
+// Chiamata dal blocco a 1s: campiona, filtra EMA, aggiorna battPct, log ogni 30s
+void updateBattery() {
+  int16_t mv = DinMeter.Power.getBatteryVoltage();
+  if (mv <= 0) return;                       // lettura non disponibile
+  if (battMv == 0.0f) battMv = mv;
+  else battMv += (mv - battMv) * 0.15f;
+  battPct = batteryPctFromMv(battMv);
+  if (millis() - lastBattLog >= 30000) {
+    lastBattLog = millis();
+    Serial.printf("[Batt] %dmV %d%%\n", (int)(battMv + 0.5f), battPct);
+  }
+}
+
+// Ridisegna la sola area batteria (menu e manuale): (4,0), size 2.
+void drawBatteryPct() {
+  int batt = battPct;
+  DinMeter.Display.fillRect(0, 0, 60, 16, TFT_BLACK);
+  DinMeter.Display.setTextSize(2);
+  DinMeter.Display.setTextColor(TFT_RED, TFT_BLACK);
+  DinMeter.Display.setCursor(4, 0);
+  if (batt >= 0) DinMeter.Display.printf("%d%%", batt);
+  else           DinMeter.Display.print("--%");
+}
+
+// ------------------------------------------------
 // MAIN_MENU (campo 05): batteria a sinistra, TEMP GRANDE a destra, righe 24px
 // ------------------------------------------------
 void drawMainMenu() {
   DinMeter.Display.fillScreen(TFT_BLACK);
 
   // Batteria a sinistra (size 2), rossa ovunque (campo 05)
-  int batt = DinMeter.Power.getBatteryLevel();
-  DinMeter.Display.setTextColor(TFT_RED, TFT_BLACK);
-  DinMeter.Display.setTextSize(2);
-  DinMeter.Display.setCursor(4, 0);
-  if (batt >= 0) DinMeter.Display.printf("%d%%", batt);
-  else           DinMeter.Display.print("--%");
+  drawBatteryPct();
 
   // TEMP GRANDE a destra (size 4, intero, right-aligned, a metà altezza)
   String tStr = sensorError ? "--" : (String((int)(currentTemp + 0.5f)) + "C");
@@ -54,6 +95,12 @@ void drawMainMenu() {
 }
 
 void updateMainMenuTemp() {
+  // Batteria: aggiorna l'area anche senza interazione (ogni 5 s)
+  static uint32_t lastBattDraw = 0;
+  if (millis() - lastBattDraw >= 5000) {
+    lastBattDraw = millis();
+    drawBatteryPct();
+  }
   if (millis() - lastTempDraw < 400) return;
   lastTempDraw = millis();
   String tStr = sensorError ? "--" : (String((int)(currentTemp + 0.5f)) + "C");
@@ -117,9 +164,13 @@ void drawSlowRise() {
 
   DinMeter.Display.setTextColor(TFT_WHITE, TFT_BLACK);
   DinMeter.Display.setCursor(10, 24);
-  DinMeter.Display.printf("T e %.0fC sotto la curva", currentTemp - targetTemp);
+  float gap = targetTemp - currentTemp;
+  if (gap >= 0.0f)
+    DinMeter.Display.printf("Forno %.0fC sotto la curva da 1h", gap);
+  else
+    DinMeter.Display.printf("Forno %.0fC sopra la curva da 1h", -gap);
 
-  const char* opts[3] = {"Attendi arrivo", "Allunga 30 min", "Annulla cottura"};
+  const char* opts[3] = {"Aspetta che recuperi", "Allunga di 30 min", "Annulla cottura"};
   for (int i = 0; i < 3; i++) {
     int y = 46 + i * 26;
     bool sel = (slowRiseSel == (uint8_t)i);
@@ -128,6 +179,12 @@ void drawSlowRise() {
     DinMeter.Display.setTextColor(TFT_WHITE, sel ? TFT_BLUE : TFT_BLACK);
     DinMeter.Display.print(opts[i]);
   }
+
+  // Spiegazione breve della voce selezionata (riga in basso, 8 px)
+  const char* hints[3] = {"poi riprende la curva", "aggiunge 30 min alla curva", "ferma il programma"};
+  DinMeter.Display.setTextColor(TFT_CYAN, TFT_BLACK);
+  DinMeter.Display.setCursor(10, 124);
+  DinMeter.Display.print(hints[slowRiseSel]);
 }
 
 // ------------------------------------------------

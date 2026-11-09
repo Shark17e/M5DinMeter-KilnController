@@ -57,7 +57,7 @@ void partialUpdateRunningState() {
     DinMeter.Display.print((int)(lastDuty + 0.5f));
     DinMeter.Display.print("%");
   }
-  int batt = DinMeter.Power.getBatteryLevel();
+  int batt = battPct;
   if (batt >= 0) {
     DinMeter.Display.setTextColor(TFT_RED, TFT_BLACK);
     DinMeter.Display.setCursor(214, 1);
@@ -197,6 +197,12 @@ void drawManualTempValue() {
 }
 
 void updateManualTempDraw() {
+  // Batteria: aggiorna l'area anche senza interazione (ogni 5 s)
+  static uint32_t lastBattDraw = 0;
+  if (millis() - lastBattDraw >= 5000) {
+    lastBattDraw = millis();
+    drawBatteryPct();
+  }
   if (millis() - lastManualTempDraw < 400) return;
   lastManualTempDraw = millis();
   drawManualTempValue();
@@ -206,12 +212,7 @@ void drawManualScreen() {
   DinMeter.Display.fillScreen(TFT_BLACK);
 
   // Batteria a sinistra
-  int batt = DinMeter.Power.getBatteryLevel();
-  DinMeter.Display.setTextColor(TFT_RED, TFT_BLACK);
-  DinMeter.Display.setTextSize(2);
-  DinMeter.Display.setCursor(4, 0);
-  if (batt >= 0) DinMeter.Display.printf("%d%%", batt);
-  else DinMeter.Display.print("--%");
+  drawBatteryPct();
 
   // Titolo centrato
   DinMeter.Display.setTextSize(2);

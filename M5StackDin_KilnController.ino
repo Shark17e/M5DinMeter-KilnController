@@ -177,6 +177,11 @@ static uint32_t pressStartTime = 0;
 static uint32_t lastTempDraw = 0;
 static uint32_t lastManualTempDraw = 0;
 
+// Batteria: mV filtrati (EMA) e percentuale da curva LiPo
+static float    battMv  = 0.0f;
+static int      battPct = -1;
+static uint32_t lastBattLog = 0;
+
 // ------------------------------------------------
 // X-axis uses real time in seconds
 // ------------------------------------------------
@@ -210,6 +215,8 @@ void drawMainMenu();
 void updateMainMenuTemp();
 void drawManualScreen();
 void updateManualTempDraw();
+void updateBattery();
+void drawBatteryPct();
 
 void drawRunningState();
 void partialUpdateRunningState();
@@ -365,6 +372,8 @@ void loop() {
       // Fail-safe: mai riscaldare senza sensore, anche in MANUAL
       setSsr(false);
     }
+
+    updateBattery();
 
     if (currentState == MAIN_MENU) {
         updateMainMenuTemp();
