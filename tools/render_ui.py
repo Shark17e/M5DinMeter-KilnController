@@ -426,6 +426,53 @@ def rename(sc):
     sc.text(10, 126, "LONG conferma  vuoto=annulla", C["muted"], 1)
 
 
+def new_name(sc):
+    sc.fill(C["bg"])
+    sc.top_bar("NUOVO PROGRAMMA", BATTERY)
+    sc.text(10, 24, "NOME", C["muted"], 1)
+    sc.rrect(8, 34, 224, 20, 4, C["surface"])
+    sc.text(14, 40, "(vuoto)", C["muted"], 1)
+
+    sc.rrect(8, 62, 46, 46, 8, C["surface2"])
+    tw = sc.text_width("A", 4)
+    sc.text(8 + (46 - tw) // 2, 69, "A", C["cyan"], 4)
+    sc.text(64, 66, "CARATTERE", C["muted"], 1)
+    sc.text(64, 78, "RUOTA per cambiare", C["text"], 1)
+    sc.text(10, 116, "RUOTA cambia  SHORT aggiunge", C["muted"], 1)
+    sc.text(10, 126, "LONG conferma  vuoto=annulla", C["muted"], 1)
+
+
+def confirm_delete(sc):
+    sc.fill(C["bg"])
+    sc.top_bar("ELIMINA", BATTERY)
+    sc.rrect(8, 24, 224, 58, 8, C["surface"])
+    sc.text(16, 30, "PROGRAMMA SELEZIONATO", C["muted"], 1)
+    name = "Default"
+    sc.text(8 + (224 - sc.text_width(name, 2)) // 2, 48, name, C["text"], 2)
+
+    for x, top, bottom, color in (
+        (8, "SHORT", "CONFERMA", C["green"]),
+        (124, "LONG", "ANNULLA", C["red"]),
+    ):
+        sc.rrect(x, 90, 108, 36, 6, color)
+        sc.text(x + (108 - sc.text_width(top, 1)) // 2, 96, top, C["bg"], 1)
+        sc.text(x + (108 - sc.text_width(bottom, 1)) // 2, 108, bottom, C["bg"], 1)
+
+
+def overtemp(sc):
+    sc.fill(C["red"])
+    sc.rrect(10, 14, 220, 107, 8, C["bg"], C["red"])
+    sc.triangle((120, 26), (102, 56), (138, 56), C["red"])
+    sc.rect(119, 34, 2, 11, C["bg"])
+    sc.rect(119, 50, 2, 2, C["bg"])
+    title = "SOVRATEMP!"
+    sc.text((240 - sc.text_width(title, 3)) // 2, 64, title, C["red"], 3)
+    l1 = "SSR SPENTO"
+    sc.text((240 - sc.text_width(l1, 1)) // 2, 96, l1, C["muted"], 1)
+    l2 = "LONG PRESS PER USCIRE"
+    sc.text((240 - sc.text_width(l2, 1)) // 2, 110, l2, C["text"], 1)
+
+
 def main():
     for name, fn in (
         ("main_menu.png", main_menu),
@@ -435,6 +482,9 @@ def main():
         ("manual.png", manual),
         ("slow_rise.png", slow_rise),
         ("rename.png", rename),
+        ("new_name.png", new_name),
+        ("confirm_delete.png", confirm_delete),
+        ("overtemp.png", overtemp),
     ):
         sc = Screen()
         fn(sc)

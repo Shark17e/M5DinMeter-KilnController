@@ -310,6 +310,8 @@ void drawOverTemp() {
 
   // Triangolo di allarme
   d.fillTriangle(120, 26, 102, 56, 138, 56, COL_RED);
+  d.fillRect(119, 34, 2, 11, COL_BG);
+  d.fillRect(119, 50, 2, 2, COL_BG);
 
   d.setTextSize(3);
   d.setTextColor(COL_RED);
