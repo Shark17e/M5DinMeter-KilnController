@@ -136,6 +136,51 @@ void updateMainMenuTemp() {
 }
 
 // ------------------------------------------------
+// PROGRAM_ACTIONS: popup azioni sul programma
+// ------------------------------------------------
+void drawProgramActions() {
+  auto& d = DinMeter.Display;
+
+  // Sfondo: menu principale, poi card sovrapposta
+  drawMainMenu();
+
+  d.fillRoundRect(18, 20, 208, 98, 8, COL_BG);       // ombra
+  d.fillRoundRect(16, 18, 208, 98, 8, COL_SURFACE);  // card
+  d.drawRoundRect(16, 18, 208, 98, 8, COL_LINE);
+
+  String pname = (actionProgramIndex >= 0 && actionProgramIndex < programCount)
+                   ? programs[actionProgramIndex].name
+                   : String("???");
+  char nb[29];
+  uiTruncate(pname.c_str(), nb, 27);
+
+  d.setTextSize(1);
+  d.setTextColor(COL_MUTED);
+  d.setCursor(24, 22);
+  d.print("AZIONI");
+  d.setTextColor(COL_TEXT);
+  d.setCursor(24, 32);
+  d.print(nb);
+
+  const char* labels[4] = {"Avvia", "Modifica curva", "Cancella programma", "Annulla"};
+  for (int i = 0; i < 4; i++) {
+    int y = 44 + i * 16;
+    bool sel = (actionSel == (uint8_t)i);
+    d.fillRoundRect(22, y, 196, 14, 4, sel ? COL_CYAN : COL_SURFACE2);
+    if (!sel) d.drawRoundRect(22, y, 196, 14, 4, COL_LINE);
+    d.setTextColor(sel ? COL_BG : COL_TEXT);
+    d.setCursor(30, y + 3);
+    d.print(labels[i]);
+  }
+
+  d.setTextColor(COL_MUTED);
+  const char* hint = "GIRA  SHORT OK";
+  int tw = d.textWidth(hint);
+  d.setCursor((240 - tw) / 2, 108);
+  d.print(hint);
+}
+
+// ------------------------------------------------
 // CONFIRM_DELETE
 // ------------------------------------------------
 void handleConfirmDelete() {
@@ -185,10 +230,25 @@ void deleteProgram(int idx) {
     programs[i] = programs[i + 1];
   }
   programCount--;
+  if (selectedIndex >= programCount) selectedIndex = (programCount > 0) ? programCount - 1 : 0;
   savePrograms();
   currentState = MAIN_MENU;
   needsUpdate = true;
   Serial.printf("[deleteProgram] Program index=%d eliminato\n", idx);
+}
+
+// Carica una copia del programma nell'editor; Salva aggiornerà l'originale.
+void beginEditProgram(int idx) {
+  if (idx < 0 || idx >= programCount) return;
+  newProgram = programs[idx];
+  editIndex = idx;
+  editingPointIndex = 0;
+  editingTempField = true;
+  fieldEditMode = false;
+  editorSel = 0;
+  currentState = ADD_PROG_EDIT;
+  needsUpdate = true;
+  Serial.printf("[Editor] Modifica '%s'\n", newProgram.name.c_str());
 }
 
 // ------------------------------------------------
@@ -360,7 +420,7 @@ void drawAddProgName() {
 void drawAddProgEdit() {
   auto& d = DinMeter.Display;
   d.fillScreen(COL_BG);
-  uiTopBar("EDITOR");
+  uiTopBar(editIndex >= 0 ? "MODIFICA" : "NUOVO");
 
   // Grafico in una card
   d.fillRoundRect(4, 18, 232, 62, 6, COL_SURFACE);
@@ -456,16 +516,27 @@ void handleAddProgEditShortPress() {
   } else if (sel == 5) {               // -P: elimina il punto
     removePoint();
   } else if (sel == 6) {               // Salva
-    if (programCount >= MAX_PROGRAMS) {
-      Serial.println("[Editor] Memoria piena, salvataggio non riuscito");
-      needsUpdate = true;
-      return;
+    if (editIndex >= 0) {
+      if (editIndex < programCount) {
+        programs[editIndex] = newProgram;
+        savePrograms();
+        Serial.println("[Editor] Program modificato");
+      }
+      editIndex = -1;
+      currentState = MAIN_MENU;
+    } else {
+      if (programCount >= MAX_PROGRAMS) {
+        Serial.println("[Editor] Memoria piena, salvataggio non riuscito");
+        needsUpdate = true;
+        return;
+      }
+      programs[programCount++] = newProgram;
+      savePrograms();
+      Serial.println("[Editor] Program salvato con successo");
+      currentState = MAIN_MENU;
     }
-    programs[programCount++] = newProgram;
-    savePrograms();
-    Serial.println("[Editor] Program salvato con successo");
-    currentState = MAIN_MENU;
   } else if (sel == 7) {               // Annulla
+    editIndex = -1;
     Serial.println("[Editor] annullato => MAIN_MENU");
     currentState = MAIN_MENU;
   }

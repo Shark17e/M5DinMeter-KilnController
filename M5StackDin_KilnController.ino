@@ -122,6 +122,7 @@ uint8_t programCount = 0;
 // ------------------------------------------------
 enum AppState {
   MAIN_MENU,
+  PROGRAM_ACTIONS,
   RUNNING,
   MANUAL,
   SLOW_RISE,
@@ -181,6 +182,11 @@ int currentCharIndex = 0;
 // Confirm delete state
 int deleteIndex = -1;
 
+// Popup azioni programma + indice del programma in modifica
+int actionProgramIndex = -1;
+uint8_t actionSel = 0;
+int editIndex = -1;
+
 // Debounce and ignore buttons until timeout
 static uint32_t ignoreButtonUntil = 0;
 
@@ -228,6 +234,8 @@ void handleLongPress();
 void handleEncoder();
 
 void drawMainMenu();
+void drawProgramActions();
+void beginEditProgram(int idx);
 void updateMainMenuTemp();
 void drawManualScreen();
 void updateManualTempDraw();
@@ -423,6 +431,12 @@ void loop() {
         needsUpdate = false;
       }
       break;
+    case PROGRAM_ACTIONS:
+      if (needsUpdate) {
+        drawProgramActions();
+        needsUpdate = false;
+      }
+      break;
     case RUNNING:
       updateProgram();
       if (currentState != RUNNING) break;   // observer può aver attivato SLOW_RISE/SOVRATEMP
@@ -503,7 +517,11 @@ void handleShortPress() {
   switch (currentState) {
     case MAIN_MENU:
       if (selectedIndex < programCount) {
-        startProgram(selectedIndex);
+        actionProgramIndex = selectedIndex;
+        actionSel = 0;
+        currentState = PROGRAM_ACTIONS;
+        needsUpdate = true;
+        ignoreButtonUntil = millis() + 300;
       } else if (selectedIndex == programCount) {
         // Manuale: interruttore SSR manuale
         setSsr(false);
@@ -515,6 +533,7 @@ void handleShortPress() {
         // Begin new program creation
         newProgram.name = "";
         newProgram.pointCount = 0;
+        editIndex = -1;
         currentCharIndex = 0;
         inputName = "";
         editingPointIndex = 0;
@@ -528,6 +547,31 @@ void handleShortPress() {
         DinMeter.Power.powerOff();
       }
       break;
+
+    case PROGRAM_ACTIONS: {
+      if (actionProgramIndex < 0 || actionProgramIndex >= programCount) {
+        currentState = MAIN_MENU;
+        needsUpdate = true;
+        break;
+      }
+      switch (actionSel) {
+        case 0:   // Avvia
+          startProgram(actionProgramIndex);
+          break;
+        case 1:   // Modifica curva
+          beginEditProgram(actionProgramIndex);
+          break;
+        case 2:   // Cancella programma
+          deleteIndex = actionProgramIndex;
+          currentState = CONFIRM_DELETE;
+          needsUpdate = true;
+          break;
+        default:  // Annulla
+          currentState = MAIN_MENU;
+          needsUpdate = true;
+          break;
+      }
+    } break;
 
     case CONFIRM_DELETE:
       // short => confirm
@@ -600,11 +644,10 @@ void handleLongPress() {
   Serial.println("[Button] LONG Press");
   switch (currentState) {
     case MAIN_MENU:
-      if (selectedIndex < programCount) {
-        deleteIndex = selectedIndex;
-        currentState = CONFIRM_DELETE;
-        needsUpdate = true;
-      }
+      // long press libero: riservato a future azioni
+      break;
+    case PROGRAM_ACTIONS:
+      // long press libero: si esce con la voce Annulla
       break;
     case CONFIRM_DELETE:
       // cancel
@@ -686,6 +729,13 @@ void handleEncoder() {
       selectedIndex += detents;
       if (selectedIndex < 0) selectedIndex = maxIdx;
       if (selectedIndex > maxIdx) selectedIndex = 0;
+      needsUpdate = true;
+    } break;
+
+    case PROGRAM_ACTIONS: {
+      int sel = (int)actionSel + detents;
+      while (sel < 0) sel += 4;
+      actionSel = (uint8_t)(sel % 4);
       needsUpdate = true;
     } break;
 
