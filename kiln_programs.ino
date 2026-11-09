@@ -141,6 +141,8 @@ void savePrograms() {
       preferences.putFloat((prefix + "_p" + String(s) + "t").c_str(), programs[i].points[s].temp);
     }
   }
+  // clear() cancella tutto il namespace, PID inclusi: riscrive i guadagni correnti
+  savePidParams();
   Serial.println("[savePrograms] completato");
 }
 

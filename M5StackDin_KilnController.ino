@@ -677,6 +677,12 @@ void handleLongPress() {
         needsUpdate = true;
         break;
       }
+      if (inputName.length() == 0) {
+        // niente nome: annulla la creazione (un nome vuoto non verrebbe ricaricato al boot)
+        currentState = MAIN_MENU;
+        needsUpdate = true;
+        break;
+      }
       newProgram.name = inputName;
       inputName = "";
       currentCharIndex = 0;

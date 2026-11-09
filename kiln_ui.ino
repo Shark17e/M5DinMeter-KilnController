@@ -425,7 +425,7 @@ void drawAddProgName() {
   d.setCursor(10, 116);
   d.print("RUOTA cambia  SHORT aggiunge");
   d.setCursor(10, 126);
-  d.print(renaming ? "LONG conferma  vuoto=annulla" : "LONG conferma nome");
+  d.print("LONG conferma  vuoto=annulla");
 }
 
 // ------------------------------------------------
