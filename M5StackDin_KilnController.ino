@@ -182,10 +182,11 @@ int currentCharIndex = 0;
 // Confirm delete state
 int deleteIndex = -1;
 
-// Popup azioni programma + indice del programma in modifica
+// Popup azioni programma + indici di modifica/rinomina
 int actionProgramIndex = -1;
 uint8_t actionSel = 0;
 int editIndex = -1;
+int renameIndex = -1;
 
 // Debounce and ignore buttons until timeout
 static uint32_t ignoreButtonUntil = 0;
@@ -534,6 +535,7 @@ void handleShortPress() {
         newProgram.name = "";
         newProgram.pointCount = 0;
         editIndex = -1;
+        renameIndex = -1;
         currentCharIndex = 0;
         inputName = "";
         editingPointIndex = 0;
@@ -561,7 +563,14 @@ void handleShortPress() {
         case 1:   // Modifica curva
           beginEditProgram(actionProgramIndex);
           break;
-        case 2:   // Cancella programma
+        case 2:   // Rinomina
+          renameIndex = actionProgramIndex;
+          inputName = "";
+          currentCharIndex = 0;
+          currentState = ADD_PROG_NAME;
+          needsUpdate = true;
+          break;
+        case 3:   // Cancella programma
           deleteIndex = actionProgramIndex;
           currentState = CONFIRM_DELETE;
           needsUpdate = true;
@@ -655,6 +664,19 @@ void handleLongPress() {
       needsUpdate = true;
       break;
     case ADD_PROG_NAME: {
+      if (renameIndex >= 0) {
+        if (inputName.length() > 0 && renameIndex < programCount) {
+          programs[renameIndex].name = inputName;
+          savePrograms();
+          Serial.printf("[Rename] '%s'\n", inputName.c_str());
+        }
+        renameIndex = -1;
+        inputName = "";
+        currentCharIndex = 0;
+        currentState = MAIN_MENU;
+        needsUpdate = true;
+        break;
+      }
       newProgram.name = inputName;
       inputName = "";
       currentCharIndex = 0;
@@ -734,8 +756,8 @@ void handleEncoder() {
 
     case PROGRAM_ACTIONS: {
       int sel = (int)actionSel + detents;
-      while (sel < 0) sel += 4;
-      actionSel = (uint8_t)(sel % 4);
+      while (sel < 0) sel += 5;
+      actionSel = (uint8_t)(sel % 5);
       needsUpdate = true;
     } break;
 

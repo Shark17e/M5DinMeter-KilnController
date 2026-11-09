@@ -144,9 +144,9 @@ void drawProgramActions() {
   // Sfondo: menu principale, poi card sovrapposta
   drawMainMenu();
 
-  d.fillRoundRect(18, 20, 208, 98, 8, COL_BG);       // ombra
-  d.fillRoundRect(16, 18, 208, 98, 8, COL_SURFACE);  // card
-  d.drawRoundRect(16, 18, 208, 98, 8, COL_LINE);
+  d.fillRoundRect(18, 20, 208, 112, 8, COL_BG);       // ombra
+  d.fillRoundRect(16, 18, 208, 112, 8, COL_SURFACE); // card
+  d.drawRoundRect(16, 18, 208, 112, 8, COL_LINE);
 
   String pname = (actionProgramIndex >= 0 && actionProgramIndex < programCount)
                    ? programs[actionProgramIndex].name
@@ -162,12 +162,12 @@ void drawProgramActions() {
   d.setCursor(24, 32);
   d.print(nb);
 
-  const char* labels[4] = {"Avvia", "Modifica curva", "Cancella programma", "Annulla"};
-  for (int i = 0; i < 4; i++) {
-    int y = 44 + i * 16;
+  const char* labels[5] = {"Avvia", "Modifica curva", "Rinomina", "Cancella programma", "Annulla"};
+  for (int i = 0; i < 5; i++) {
+    int y = 44 + i * 15;
     bool sel = (actionSel == (uint8_t)i);
-    d.fillRoundRect(22, y, 196, 14, 4, sel ? COL_CYAN : COL_SURFACE2);
-    if (!sel) d.drawRoundRect(22, y, 196, 14, 4, COL_LINE);
+    d.fillRoundRect(22, y, 196, 13, 4, sel ? COL_CYAN : COL_SURFACE2);
+    if (!sel) d.drawRoundRect(22, y, 196, 13, 4, COL_LINE);
     d.setTextColor(sel ? COL_BG : COL_TEXT);
     d.setCursor(30, y + 3);
     d.print(labels[i]);
@@ -176,7 +176,7 @@ void drawProgramActions() {
   d.setTextColor(COL_MUTED);
   const char* hint = "GIRA  SHORT OK";
   int tw = d.textWidth(hint);
-  d.setCursor((240 - tw) / 2, 108);
+  d.setCursor((240 - tw) / 2, 120);
   d.print(hint);
 }
 
@@ -368,16 +368,32 @@ String shortTimeLabel(uint32_t sec) {
 // ------------------------------------------------
 void drawAddProgName() {
   auto& d = DinMeter.Display;
+  bool renaming = (renameIndex >= 0 && renameIndex < programCount);
+
   d.fillScreen(COL_BG);
-  uiTopBar("NUOVO PROGRAMMA");
+  uiTopBar(renaming ? "RINOMINA" : "NUOVO PROGRAMMA");
 
   d.setTextSize(1);
   d.setTextColor(COL_MUTED);
   d.setCursor(10, 24);
-  d.print("NOME");
+  if (renaming) {
+    d.print("ATTUALE: ");
+    d.setTextColor(COL_TEXT);
+    if (programs[renameIndex].name.length() == 0) d.print("(vuoto)");
+    else                                           d.print(programs[renameIndex].name);
+  } else {
+    d.print("NOME");
+  }
 
   d.fillRoundRect(8, 34, 224, 20, 4, COL_SURFACE);
-  d.setCursor(14, 40);
+  if (renaming) {
+    d.setTextColor(COL_MUTED);
+    d.setCursor(14, 40);
+    d.print("NUOVO");
+    d.setCursor(56, 40);
+  } else {
+    d.setCursor(14, 40);
+  }
   if (inputName.length() == 0) {
     d.setTextColor(COL_MUTED);
     d.print("(vuoto)");
@@ -409,7 +425,7 @@ void drawAddProgName() {
   d.setCursor(10, 116);
   d.print("RUOTA cambia  SHORT aggiunge");
   d.setCursor(10, 126);
-  d.print("LONG conferma nome");
+  d.print(renaming ? "LONG conferma  vuoto=annulla" : "LONG conferma nome");
 }
 
 // ------------------------------------------------
